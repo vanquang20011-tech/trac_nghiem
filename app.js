@@ -12,6 +12,26 @@ let examTotalSeconds = 0; // để tính thời gian làm thực tế
 // TIỆN ÍCH
 // ========================
 
+let headerCollapsed = false;
+
+function setHeaderCollapsed(collapse) {
+  const headerEl = document.querySelector(".exam-header");
+  const toggleBtn = document.getElementById("headerToggle");
+  if (!headerEl || !toggleBtn) return;
+
+  headerCollapsed = collapse;
+
+  if (collapse) {
+    headerEl.classList.add("header-collapsed");
+    toggleBtn.textContent = "▼"; // đang thu, bấm để mở
+  } else {
+    headerEl.classList.remove("header-collapsed");
+    toggleBtn.textContent = "▲"; // đang mở, bấm để thu
+  }
+}
+
+
+
 function formatTime(sec) {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
@@ -99,15 +119,18 @@ function loadFile() {
       }
 
       questionsData = data;
-      // Lấy tên file bài thi
-const examNameEl = document.getElementById("examName");
-const fileName = file.name.replace(".json", "");
-examNameEl.textContent = "Bài thi: " + fileName;
-examNameEl.style.display = "block";
-
       examFinished = false;
+
+      // tên bài thi theo tên file
+      const examNameEl = document.getElementById("examName");
+      const fileName = file.name.replace(/\.json$/i, "");
+      examNameEl.textContent = "Bài thi: " + fileName;
+      examNameEl.style.display = "block";
+
       generateQuiz();
       startTimer();
+
+      setHeaderCollapsed(true); // tạo đề xong thì thu gọn header
 
       document.getElementById("result").textContent = "";
       document.getElementById("noteArea").textContent =
@@ -126,6 +149,35 @@ examNameEl.style.display = "block";
     }
   };
   reader.readAsText(file);
+}
+
+// ========================
+// RENDER BẢNG SỐ CÂU
+// ========================
+
+function renderQuestionNav() {
+  const listEl = document.getElementById("questionList");
+  if (!listEl) return;
+
+  listEl.innerHTML = "";
+
+  questionsData.forEach((_, i) => {
+    const btn = document.createElement("button");
+    btn.className = "qnav-item";
+    btn.textContent = i + 1;
+    btn.dataset.index = String(i);
+
+    btn.addEventListener("click", () => {
+      const card = document.querySelector(`.question-card[data-index="${i}"]`);
+      if (card) {
+        card.scrollIntoView({ behavior: "smooth", block: "start" });
+        card.classList.add("jump-highlight");
+        setTimeout(() => card.classList.remove("jump-highlight"), 800);
+      }
+    });
+
+    listEl.appendChild(btn);
+  });
 }
 
 // ========================
@@ -200,6 +252,9 @@ function generateQuiz() {
   allInputs.forEach((inp) => {
     inp.disabled = false;
   });
+
+  // tạo lại bảng số câu
+  renderQuestionNav();
 }
 
 // ========================
@@ -225,9 +280,16 @@ function grade(autoSubmit) {
 
   let score = 0;
 
+  // reset màu nav
+  const navItems = document.querySelectorAll(".qnav-item");
+  navItems.forEach((btn) => {
+    btn.classList.remove("nav-correct", "nav-incorrect");
+  });
+
   questionsData.forEach((q, i) => {
     const card = document.querySelector(`.question-card[data-index="${i}"]`);
     const feedbackEl = document.getElementById(`feedback-${i}`);
+    const navBtn = document.querySelector(`.qnav-item[data-index="${i}"]`);
 
     card.classList.remove("correct", "incorrect");
     feedbackEl.classList.remove("correct", "incorrect");
@@ -254,6 +316,8 @@ function grade(autoSubmit) {
           label.classList.add("correct");
         }
       });
+
+      if (navBtn) navBtn.classList.add("nav-correct");
     } else {
       card.classList.add("incorrect");
       feedbackEl.classList.add("incorrect");
@@ -278,6 +342,8 @@ function grade(autoSubmit) {
           label.classList.add("correct");
         }
       });
+
+      if (navBtn) navBtn.classList.add("nav-incorrect");
     }
   });
 
@@ -340,6 +406,7 @@ function resetExam() {
   questionsData = [];
   examTotalSeconds = 0;
   remainingSeconds = 0;
+  setHeaderCollapsed(false);
 
   document.getElementById("quiz").innerHTML =
     '<p class="muted">Chưa có đề. Hãy chọn file <b>.json</b> và nhập thời gian rồi bấm <b>“Tạo đề &amp; bắt đầu thi”</b>.</p>';
@@ -356,6 +423,15 @@ function resetExam() {
     topResultEl.textContent = "";
     topResultEl.classList.remove("bad");
   }
+
+  const examNameEl = document.getElementById("examName");
+  if (examNameEl) {
+    examNameEl.style.display = "none";
+    examNameEl.textContent = "";
+  }
+
+  const listEl = document.getElementById("questionList");
+  if (listEl) listEl.innerHTML = "";
 }
 
 // ========================
@@ -366,4 +442,13 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnStart").addEventListener("click", loadFile);
   document.getElementById("btnReset").addEventListener("click", resetExam);
   document.getElementById("btnGrade").addEventListener("click", () => grade(false));
+
+  const headerToggle = document.getElementById("headerToggle");
+  if (headerToggle) {
+    headerToggle.addEventListener("click", () => {
+      setHeaderCollapsed(!headerCollapsed);
+    });
+  }
 });
+
+

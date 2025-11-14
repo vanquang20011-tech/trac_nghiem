@@ -11,10 +11,12 @@
   <header class="exam-header">
     <div class="exam-header-left">
       <h1 class="exam-title">Bài thi trắc nghiệm</h1>
-      <p id="examName" class="exam-name" style="display:none;"></p>
       <p class="exam-subtitle">
         Chọn file câu hỏi, nhập thời gian &amp; bắt đầu làm bài.
       </p>
+
+      <!-- Tên bài thi (theo tên file) -->
+      <p id="examName" class="exam-name" style="display:none;"></p>
 
       <!-- Kết quả nổi bật ở đầu trang -->
       <div id="topResult" class="top-result" style="display:none;"></div>
@@ -39,20 +41,39 @@
           </button>
         </div>
       </div>
+
     </div>
 
     <div class="exam-header-right">
       <div class="timer-label">Thời gian còn lại</div>
       <div id="timer" class="timer timer-idle">--:--</div>
-      <p class="timer-note">Bạn có thể đổi số phút trước khi bấm bắt đầu.</p>
+      <p class="timer-note"></p>
+      <button type="button" id="headerToggle" class="header-toggle" title="Thu gọn / mở rộng thanh trên cùng">
+      ▲
+    </button>
     </div>
+    
   </header>
 
-  <main class="exam-body" id="quiz">
-    <p class="muted">
-      Chưa có đề. Hãy chọn file <b>.json</b> và nhập thời gian rồi bấm
-      <b>“Tạo đề &amp; bắt đầu thi”</b>.
-    </p>
+  <!-- BODY: bên trái là câu hỏi, bên phải là bảng số câu -->
+  <main class="exam-body">
+    <section class="exam-main" id="quiz">
+      <p class="muted">
+        Chưa có đề. Hãy chọn file <b>.json</b> và nhập thời gian rồi bấm
+        <b>“Tạo đề &amp; bắt đầu thi”</b>.
+      </p>
+    </section>
+
+    <aside class="question-nav">
+      <div class="question-nav-title">Câu hỏi</div>
+      <div class="question-nav-sub">Nhấn số để nhảy tới câu.</div>
+      <div id="questionList" class="question-list">
+        <!-- JS render số câu ở đây -->
+      </div>
+      <button id="btnGrade" class="btn btn-primary nav-submit-btn">
+    Nộp bài
+  </button>
+    </aside>
   </main>
 
   <footer class="exam-footer">

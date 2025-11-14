@@ -2,6 +2,11 @@
   box-sizing: border-box;
 }
 
+html {
+  font-size: 17px;   /* mặc định 16px → tăng 1 bước */
+}
+
+
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: linear-gradient(135deg, #eef2ff, #f9fafb);
@@ -10,8 +15,54 @@ body {
   color: #111827;
 }
 
+/* Header collapsed */
+.header-collapsed {
+  height: 118px !important;
+}
+
+/* Header expanded */
+.header-expanded {
+  height: auto !important;
+  transition: height 0.25s ease;
+}
+
+/* Toggle button */
+.header-toggle {
+  position: absolute;
+  right: 24px;       /* sát mép phải header */
+  bottom: -14px;     /* nhô xuống dưới 1 chút (âm là nằm dưới đường viền) */
+  border: none;
+  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  cursor: pointer;
+  background: #ffffff;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
+  transition: background 0.15s, transform 0.06s, box-shadow 0.15s;
+  z-index: 20;       /* cao hơn header một chút để không bị che */
+}
+
+.header-toggle:hover {
+  background: #f3f4f6;
+  transform: translateY(-1px);
+}
+
+
+
+.header-title-small {
+  font-size: 16px;
+  font-weight: 700;
+  padding-left: 10px;
+  margin-top: 10px;
+}
+
+
 .exam-wrapper {
-  max-width: 950px;
+  max-width: 1180px;
   margin: 24px auto 40px;
   padding: 0 16px;
 }
@@ -26,10 +77,32 @@ body {
   justify-content: space-between;
   align-items: flex-start;
   gap: 24px;
-  position: sticky;
+  position: sticky; /* rất quan trọng: để sticky + làm mốc cho nút */
   top: 0;
   z-index: 10;
+  transition: padding 0.2s ease;
 }
+
+
+/* Khi header thu gọn sau khi bắt đầu thi */
+.exam-header.header-collapsed {
+  padding: 10px 22px;          /* nhỏ hơn chút nhưng vẫn cao, dễ nhìn */
+}
+
+/* Ẩn bớt phần điều khiển khi thu gọn để đỡ che content */
+.exam-header.header-collapsed .controls,
+.exam-header.header-collapsed .exam-subtitle {
+  display: none;
+}
+
+/* Title nhỏ lại chút khi thu gọn */
+.exam-header.header-collapsed .exam-title {
+  font-size: 1.5rem;
+  margin-bottom: 0;
+}
+
+
+
 
 .exam-header-left {
   flex: 1;
@@ -45,13 +118,20 @@ body {
 .exam-subtitle {
   font-size: 13px;
   color: #6b7280;
-  margin: 0 0 8px;
+  margin: 0 0 4px;
+}
+
+.exam-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e3a8a;
+  margin: 2px 0 8px;
 }
 
 /* KẾT QUẢ NỔI BẬT Ở TRÊN ĐẦU */
 
 .top-result {
-  margin-top: 6px;
+  margin-top: 4px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -209,15 +289,96 @@ input[type="number"] {
   box-shadow: none;
 }
 
-/* BODY */
+/* BODY: 2 cột */
 
 .exam-body {
   margin-top: 22px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.exam-main {
+  flex: 1;
+  min-width: 0;
 }
 
 .muted {
   font-size: 13px;
   color: #6b7280;
+}
+
+/* BẢNG SỐ CÂU BÊN PHẢI */
+
+.question-nav {
+  width: 180px;
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+  padding: 10px 12px 12px;
+  position: sticky;
+  top: 35%;
+  font-size: 13px;
+  z-index: 999;
+}
+
+.nav-submit-btn {
+  margin-top: 14px;
+  padding: 12px 16px;
+  font-size: 16px;
+  width: 100%;
+  border-radius: 10px;
+}
+
+.question-nav-title {
+  font-weight: 700;
+  color: #111827;
+}
+
+.question-nav-sub {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+.question-list {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.qnav-item {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border 0.15s, transform 0.06s, box-shadow 0.15s, color 0.15s;
+}
+
+.qnav-item:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2);
+  transform: translateY(-0.5px);
+}
+
+.qnav-item.nav-correct {
+  background: #22c55e;
+  border-color: #16a34a;
+  color: #ffffff;
+}
+
+.qnav-item.nav-incorrect {
+  background: #ef4444;
+  border-color: #b91c1c;
+  color: #ffffff;
 }
 
 /* CARD CÂU HỎI */
@@ -232,6 +393,15 @@ input[type="number"] {
   transition: border 0.18s, box-shadow 0.18s, transform 0.07s, background 0.18s;
   position: relative;
   overflow: hidden;
+  scroll-margin-top: 140px;
+}
+
+.nav-submit-btn {
+  color: white;
+}
+.nav-submit-btn:hover {
+  background: #dc2626;
+  transition: all 0.5s;
 }
 
 .question-card::before {
@@ -259,6 +429,12 @@ input[type="number"] {
 
 .question-card.incorrect {
   border-color: #f97316;
+}
+
+/* highlight khi nhảy tới từ bảng số câu */
+.question-card.jump-highlight {
+  box-shadow: 0 0 0 2px #2563eb inset, 0 18px 35px rgba(37, 99, 235, 0.4);
+  background: #eff6ff;
 }
 
 .question-header {
@@ -313,7 +489,7 @@ input[type="number"] {
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 1rem;
   transition: background 0.15s, border 0.15s, transform 0.06s, box-shadow 0.15s;
 }
 
@@ -396,7 +572,7 @@ input[type="number"] {
 
 .feedback {
   margin-top: 7px;
-  font-size: 13px;
+  font-size: 0.7rem;
 }
 
 .feedback.correct {
@@ -429,7 +605,7 @@ input[type="number"] {
 
 /* RESPONSIVE */
 
-@media (max-width: 700px) {
+@media (max-width: 800px) {
   .exam-header {
     flex-direction: column;
     align-items: stretch;
@@ -448,13 +624,17 @@ input[type="number"] {
     justify-content: flex-start;
   }
 
+  .exam-body {
+    flex-direction: column;
+  }
+
+  .question-nav {
+    width: 100%;
+    position: static;
+    order: -1;
+  }
+
   .exam-wrapper {
     margin-top: 12px;
   }
-}
-.exam-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #1e3a8a;
-  margin: 2px 0 10px;
 }
