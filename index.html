@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Bài thi trắc nghiệm</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="exam-wrapper">
+
+  <header class="exam-header">
+    <div class="exam-header-left">
+      <h1 class="exam-title">Bài thi trắc nghiệm</h1>
+      <p id="examName" class="exam-name" style="display:none;"></p>
+      <p class="exam-subtitle">
+        Chọn file câu hỏi, nhập thời gian &amp; bắt đầu làm bài.
+      </p>
+
+      <!-- Kết quả nổi bật ở đầu trang -->
+      <div id="topResult" class="top-result" style="display:none;"></div>
+
+      <div class="controls">
+        <div class="control-group">
+          <label for="fileInput" class="control-label">File câu hỏi (.json)</label>
+          <input type="file" id="fileInput" accept=".json">
+        </div>
+
+        <div class="control-group">
+          <label for="timeInput" class="control-label">Thời gian (phút)</label>
+          <input type="number" id="timeInput" min="1" max="180" value="15">
+        </div>
+
+        <div class="control-buttons">
+          <button class="btn btn-primary" id="btnStart">
+            📂 Tạo đề &amp; bắt đầu thi
+          </button>
+          <button class="btn btn-secondary" id="btnReset">
+            🔄 Làm lại
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="exam-header-right">
+      <div class="timer-label">Thời gian còn lại</div>
+      <div id="timer" class="timer timer-idle">--:--</div>
+      <p class="timer-note">Bạn có thể đổi số phút trước khi bấm bắt đầu.</p>
+    </div>
+  </header>
+
+  <main class="exam-body" id="quiz">
+    <p class="muted">
+      Chưa có đề. Hãy chọn file <b>.json</b> và nhập thời gian rồi bấm
+      <b>“Tạo đề &amp; bắt đầu thi”</b>.
+    </p>
+  </main>
+
+  <footer class="exam-footer">
+    <div class="footer-left">
+      <button id="btnGrade" class="btn btn-primary btn-large" style="display:none;">
+        ✅ Nộp bài &amp; chấm điểm
+      </button>
+      <p class="muted" id="noteArea"></p>
+    </div>
+    <div class="footer-right">
+      <p class="result-text" id="result"></p>
+    </div>
+  </footer>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
