@@ -183,9 +183,7 @@ function chooseExamFromDriveFolder() {
   let folderId = DRIVE_FOLDER_ID;
 
   if (!folderId) {
-    const link = prompt(
-      "Dán link thư mục Google Drive (hoặc chỉ ID thư mục):"
-    );
+    const link = "https://drive.google.com/drive/folders/1yIfmYSkZHBpoJZqBtNfZKWMnxmg46uDX?usp=sharing"
     if (!link) return;
     folderId = getFolderIdFromUrl(link);
   }
