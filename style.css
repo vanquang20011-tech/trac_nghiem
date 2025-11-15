@@ -448,7 +448,7 @@ input[type="number"] {
   transition: border 0.18s, box-shadow 0.18s, transform 0.07s, background 0.18s;
   position: relative;
   overflow: hidden;
-  scroll-margin-top: 140px; /* để click số câu không bị header che */
+  scroll-margin-top: 150px; /* để click số câu không bị header che */
 }
 
 .question-card::before {
@@ -672,11 +672,49 @@ input[type="number"] {
   }
 
   .exam-header.header-collapsed {
-    padding: 8px 14px;
+    padding: 6px 10px;          
+    border-radius: 0 0 12px 12px;
+    flex-direction: row;           /* từ column -> row để thấp hơn */
+    align-items: center;
+    gap: 8px;
+  }
+
+  .exam-header.header-collapsed .exam-header-left {
+    flex: 1;
+  }
+
+.exam-header.header-collapsed .exam-title{
+  font-size: 14px;
+    margin-bottom: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; 
+}
+
+  .exam-header.header-collapsed .exam-subtitle,
+  .exam-header.header-collapsed .controls,
+  .exam-header.header-collapsed #examName,
+  .exam-header.header-collapsed #topResult,
+  .exam-header.header-collapsed .timer-note {
+    display: none !important;
   }
 
   .exam-header-right {
     text-align: left;
+  }
+
+  .exam-header.header-collapsed .exam-header-right {
+    min-width: auto;
+    text-align: right;
+    display: flex;
+    flex-direction: row;
+    align-items: center;   /* chính chỗ này giúp cân giữa */
+    gap: 6px;
+  }
+  .exam-header.header-collapsed .timer {
+    font-size: 16px;
+    margin: 0;
+    line-height: 1;        /* tránh chiếm chiều cao thừa */
   }
 
   .controls {
@@ -745,6 +783,8 @@ input[type="number"] {
     display: inline-flex !important;
   }
 
+  
+
   .nav-submit-btn {
     display: none;
   }
@@ -757,11 +797,23 @@ input[type="number"] {
     padding: 12px 14px;
     margin-bottom: 10px;
     box-shadow: 0 12px 22px rgba(15, 23, 42, 0.06);
-    scroll-margin-top: 120px;
+    scroll-margin-top: 186px;
   }
 
   .question-text {
     font-size: 0.95rem;
+  }
+
+  .exam-header.header-collapsed .timer-label {
+    display: none;                 /* tiết kiệm chiều cao, chỉ còn số thời gian */
+  }
+  .exam-header.header-collapsed .header-submit-btn,
+  .exam-header.header-collapsed .header-question-btn {
+    width: auto;
+    margin-top: 0;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 999px;
   }
 
   .option-label {
@@ -775,7 +827,8 @@ input[type="number"] {
 
   .header-toggle {
     right: 12px;
-    bottom: -14px !important;
+    bottom: 0 !important;
+    transform: translateY(50%);
   }
   
 }
