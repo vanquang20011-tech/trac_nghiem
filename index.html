@@ -44,15 +44,19 @@
             🔄 Làm lại
           </button>
         </div>
-
       </div>
-
     </div>
 
     <div class="exam-header-right">
       <div class="timer-label">Thời gian còn lại</div>
       <div id="timer" class="timer timer-idle">--:--</div>
       <p class="timer-note"></p>
+
+      <!-- Nút nộp bài cho mobile / tablet -->
+      <button id="btnGradeHeader" class="btn btn-primary header-submit-btn">
+        Nộp bài
+      </button>
+
       <button
         type="button"
         id="headerToggle"
@@ -82,7 +86,8 @@
       <div id="questionList" class="question-list">
         <!-- JS render số câu ở đây -->
       </div>
-      <button id="btnGrade" class="btn btn-primary nav-submit-btn">
+      <!-- Nút nộp bài cho desktop -->
+      <button id="btnGradeNav" class="btn btn-primary nav-submit-btn">
         Nộp bài
       </button>
     </aside>

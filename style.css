@@ -43,7 +43,7 @@ body {
 }
 
 .exam-wrapper {
-  max-width: 950px;
+  max-width: 1280px;
   margin: 24px auto 40px;
   padding: 0 16px;
 }
@@ -219,6 +219,24 @@ input[type="number"] {
   color: #9ca3af;
 }
 
+/* Nút nộp bài ở header (cho mobile / tablet) */
+.header-submit-btn {
+  margin-top: 8px;
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 15px;
+  border-radius: 10px;
+  background: #ef4444;
+  color: #ffffff;
+  font-weight: 600;
+  box-shadow: 0 6px 14px rgba(220, 38, 38, 0.3);
+  display: none !important; /* Desktop: ẩn */
+}
+
+.header-submit-btn:hover {
+  background: #dc2626;
+}
+
 .btn {
   border: none;
   border-radius: 999px;
@@ -289,7 +307,7 @@ input[type="number"] {
 /* BẢNG SỐ CÂU BÊN PHẢI */
 
 .question-nav {
-  width: 180px;
+  width: 280px;
   background: #ffffff;
   border-radius: 14px;
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
@@ -330,7 +348,7 @@ input[type="number"] {
   margin-top: 8px;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
 }
 
 .qnav-item {
@@ -364,6 +382,13 @@ input[type="number"] {
   background: #ef4444;
   border-color: #b91c1c;
   color: #ffffff;
+}
+
+/* Đã chọn đáp án nhưng chưa chấm – chỉ khi chưa có đúng/sai */
+.qnav-item.nav-answered:not(.nav-correct):not(.nav-incorrect) {
+  background: #e0f2fe;
+  border-color: #60a5fa;
+  color: #1d4ed8;
 }
 
 /* CARD CÂU HỎI */
@@ -639,6 +664,11 @@ input[type="number"] {
     justify-content: flex-start;
   }
 
+  /* Mobile / tablet: dùng nút header, ẩn nút bên bảng câu hỏi */
+  .header-submit-btn {
+    display: inline-flex !important;
+  }
+
   .qnav-item {
     width: 30px;
     height: 30px;
@@ -646,9 +676,11 @@ input[type="number"] {
   }
 
   .nav-submit-btn {
-    margin-top: 10px;
-    font-size: 0.95rem;
-    padding: 9px 12px;
+    display: none;
+  }
+
+  .exam-wrapper {
+    margin-top: 12px;
   }
 
   .question-card {

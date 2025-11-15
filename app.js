@@ -16,7 +16,7 @@ const API_KEY = "AIzaSyAry4xCdznJGeWvTi1NtId0q6YgPfZdwrg";
 
 // Nếu bạn muốn cố định 1 thư mục thì điền luôn ID vào đây.
 // VD: const DRIVE_FOLDER_ID = "XXXXXXXXXXXXXXX";
-const DRIVE_FOLDER_ID = ""; // để trống: mỗi lần bấm sẽ hỏi link thư mục
+const DRIVE_FOLDER_ID = ""; // để trống: đang dùng link cố định trong code
 
 // ========================
 // TIỆN ÍCH GIAO DIỆN
@@ -131,8 +131,6 @@ function applyExamData(data, examNameLabel) {
   document.getElementById("result").textContent = "";
   document.getElementById("noteArea").textContent =
     "Bài thi đã bắt đầu. Đừng quên nộp bài trước khi hết giờ!";
-  const btnGrade = document.getElementById("btnGrade");
-  if (btnGrade) btnGrade.style.display = "inline-flex";
 
   const topResultEl = document.getElementById("topResult");
   if (topResultEl) {
@@ -183,7 +181,8 @@ function chooseExamFromDriveFolder() {
   let folderId = DRIVE_FOLDER_ID;
 
   if (!folderId) {
-    const link = "https://drive.google.com/drive/folders/1yIfmYSkZHBpoJZqBtNfZKWMnxmg46uDX?usp=sharing"
+    // Link thư mục Drive public của bạn
+    const link = "https://drive.google.com/drive/folders/1yIfmYSkZHBpoJZqBtNfZKWMnxmg46uDX?usp=sharing";
     if (!link) return;
     folderId = getFolderIdFromUrl(link);
   }
@@ -286,6 +285,18 @@ function renderQuestionNav() {
   });
 }
 
+function markQuestionAnswered(index) {
+  const navBtn = document.querySelector(`.qnav-item[data-index="${index}"]`);
+  if (!navBtn) return;
+
+  // Nếu đã chấm rồi (đúng/sai) thì giữ màu đúng/sai
+  if (navBtn.classList.contains("nav-correct") || navBtn.classList.contains("nav-incorrect")) {
+    return;
+  }
+
+  navBtn.classList.add("nav-answered");
+}
+
 // ========================
 // TẠO GIAO DIỆN CÂU HỎI
 // ========================
@@ -333,6 +344,11 @@ function generateQuiz() {
       input.value = opt; // lưu full text đáp án
       input.id = optId;
       input.className = "option-input";
+
+      // Khi chọn đáp án, đánh dấu câu này đã làm
+      input.addEventListener("change", () => {
+        markQuestionAnswered(index);
+      });
 
       const label = document.createElement("label");
       label.setAttribute("for", optId);
@@ -400,7 +416,7 @@ function grade(autoSubmit) {
   // reset màu nav
   const navItems = document.querySelectorAll(".qnav-item");
   navItems.forEach((btn) => {
-    btn.classList.remove("nav-correct", "nav-incorrect");
+    btn.classList.remove("nav-correct", "nav-incorrect", "nav-answered");
   });
 
   const letters = ["A", "B", "C", "D", "E", "F", "G"];
@@ -525,9 +541,6 @@ function grade(autoSubmit) {
   document.getElementById("noteArea").textContent = autoSubmit
     ? "Hết giờ, bài đã được tự động nộp. Hãy xem kỹ lại những câu sai để nhớ lâu hơn."
     : "Bạn đã nộp bài. Hãy xem lại các câu sai và đọc kỹ đáp án đúng để củng cố trí nhớ.";
-
-  const btnGrade = document.getElementById("btnGrade");
-  if (btnGrade) btnGrade.style.display = "none";
 }
 
 // ========================
@@ -551,9 +564,6 @@ function resetExam() {
   const timerEl = document.getElementById("timer");
   timerEl.textContent = "--:--";
   timerEl.className = "timer timer-idle";
-
-  const btnGrade = document.getElementById("btnGrade");
-  if (btnGrade) btnGrade.style.display = "none";
 
   const topResultEl = document.getElementById("topResult");
   if (topResultEl) {
@@ -583,8 +593,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnReset = document.getElementById("btnReset");
   if (btnReset) btnReset.addEventListener("click", resetExam);
 
-  const btnGrade = document.getElementById("btnGrade");
-  if (btnGrade) btnGrade.addEventListener("click", () => grade(false));
+  // Hai nút nộp bài: header (mobile/tablet) & nav (desktop)
+  const btnGradeHeader = document.getElementById("btnGradeHeader");
+  if (btnGradeHeader) btnGradeHeader.addEventListener("click", () => grade(false));
+
+  const btnGradeNav = document.getElementById("btnGradeNav");
+  if (btnGradeNav) btnGradeNav.addEventListener("click", () => grade(false));
 
   const btnSelectDrive = document.getElementById("btnSelectDrive");
   if (btnSelectDrive) {
