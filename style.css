@@ -712,7 +712,7 @@ input[type="number"] {
     gap: 6px;
   }
   .exam-header.header-collapsed .timer {
-    font-size: 16px;
+    font-size: 17px;
     margin: 0;
     line-height: 1;        /* tránh chiếm chiều cao thừa */
   }
@@ -783,8 +783,8 @@ input[type="number"] {
     display: inline-flex !important;
   }
 
-  
 
+  
   .nav-submit-btn {
     display: none;
   }
@@ -830,7 +830,9 @@ input[type="number"] {
     bottom: 0 !important;
     transform: translateY(50%);
   }
-  
+  .header-toggle:hover{
+    transform: translateY(50%);
+  }
 }
 
 @media (max-width: 480px) {
@@ -847,7 +849,7 @@ input[type="number"] {
   }
 
   .timer {
-    font-size: 1.3rem;
+    font-size: 1.4rem;
   }
 
   .question-card {
