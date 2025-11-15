@@ -6,23 +6,16 @@ let questionsData = [];
 let timerInterval = null;
 let remainingSeconds = 0;
 let examFinished = false;
-let examTotalSeconds = 0; // để tính thời gian làm thực tế
-
-// ========================
-// GOOGLE DRIVE – LẤY ĐỀ TỪ 1 THƯ MỤC PUBLIC
-// ========================
+let examTotalSeconds = 0;
 
 const API_KEY = "AIzaSyAry4xCdznJGeWvTi1NtId0q6YgPfZdwrg";
-
-// Nếu bạn muốn cố định 1 thư mục thì điền luôn ID vào đây.
-// VD: const DRIVE_FOLDER_ID = "XXXXXXXXXXXXXXX";
-const DRIVE_FOLDER_ID = ""; // để trống: đang dùng link cố định trong code
-
-// ========================
-// TIỆN ÍCH GIAO DIỆN
-// ========================
+const DRIVE_FOLDER_ID = ""; // có thể để ID thư mục cố định nếu muốn
 
 let headerCollapsed = false;
+
+// ========================
+// HEADER COLLAPSE
+// ========================
 
 function setHeaderCollapsed(collapse) {
   const headerEl = document.querySelector(".exam-header");
@@ -33,12 +26,16 @@ function setHeaderCollapsed(collapse) {
 
   if (collapse) {
     headerEl.classList.add("header-collapsed");
-    toggleBtn.textContent = "▼"; // đang thu, bấm để mở
+    toggleBtn.textContent = "▼";
   } else {
     headerEl.classList.remove("header-collapsed");
-    toggleBtn.textContent = "▲"; // đang mở, bấm để thu
+    toggleBtn.textContent = "▲";
   }
 }
+
+// ========================
+// TIỆN ÍCH THỜI GIAN
+// ========================
 
 function formatTime(sec) {
   const m = Math.floor(sec / 60);
@@ -49,8 +46,7 @@ function formatTime(sec) {
 function updateTimerDisplay() {
   const timerEl = document.getElementById("timer");
   timerEl.textContent = formatTime(remainingSeconds);
-
-  timerEl.className = "timer"; // reset base class
+  timerEl.className = "timer";
 
   if (remainingSeconds <= 0) {
     timerEl.classList.add("timer-danger");
@@ -71,16 +67,11 @@ function updateTimerDisplay() {
   }
 }
 
-// ========================
-// TIMER
-// ========================
-
 function startTimer() {
   if (timerInterval) clearInterval(timerInterval);
 
   const timeInput = document.getElementById("timeInput");
   let minutes = parseInt(timeInput.value);
-
   if (isNaN(minutes) || minutes <= 0) {
     minutes = 15;
     timeInput.value = 15;
@@ -94,7 +85,7 @@ function startTimer() {
     if (remainingSeconds <= 0) {
       clearInterval(timerInterval);
       if (!examFinished) {
-        grade(true); // auto nộp khi hết giờ
+        grade(true);
       }
       return;
     }
@@ -104,8 +95,7 @@ function startTimer() {
 }
 
 // ========================
-// ÁP DỤNG DỮ LIỆU ĐỀ THI
-// (JSON dạng: [{question, options: [..], answer}, ...])
+// ÁP DỤNG ĐỀ THI
 // ========================
 
 function applyExamData(data, examNameLabel) {
@@ -117,7 +107,6 @@ function applyExamData(data, examNameLabel) {
   questionsData = data;
   examFinished = false;
 
-  // Tên bài thi
   const examNameEl = document.getElementById("examName");
   if (examNameEl) {
     examNameEl.textContent = examNameLabel || "Bài thi trắc nghiệm";
@@ -126,7 +115,7 @@ function applyExamData(data, examNameLabel) {
 
   generateQuiz();
   startTimer();
-  setHeaderCollapsed(true); // tạo đề xong thì thu gọn header
+  setHeaderCollapsed(true);
 
   document.getElementById("result").textContent = "";
   document.getElementById("noteArea").textContent =
@@ -141,7 +130,7 @@ function applyExamData(data, examNameLabel) {
 }
 
 // ========================
-// LOAD FILE CÂU HỎI TỪ MÁY
+// LOAD FILE TỪ MÁY
 // ========================
 
 function loadFile() {
@@ -170,20 +159,16 @@ function loadFile() {
 // GOOGLE DRIVE – LẤY ĐỀ TỪ THƯ MỤC PUBLIC
 // ========================
 
-// Lấy folderId từ URL (nếu dán nguyên link Drive)
 function getFolderIdFromUrl(url) {
   const m = url.match(/folders\/([a-zA-Z0-9_-]+)/);
   return m ? m[1] : url.trim();
 }
 
-// Bấm nút "Chọn đề từ Google Drive"
 function chooseExamFromDriveFolder() {
   let folderId = DRIVE_FOLDER_ID;
 
   if (!folderId) {
-    // Link thư mục Drive public của bạn
     const link = "https://drive.google.com/drive/folders/1yIfmYSkZHBpoJZqBtNfZKWMnxmg46uDX?usp=sharing";
-    if (!link) return;
     folderId = getFolderIdFromUrl(link);
   }
 
@@ -200,7 +185,7 @@ function chooseExamFromDriveFolder() {
       if (!data.files || !data.files.length) {
         alert(
           "Không tìm thấy file JSON nào trong thư mục.\n" +
-          "Nhớ đặt thư mục & file ở chế độ 'Anyone with link' (Bất kỳ ai có đường liên kết)."
+          "Nhớ đặt thư mục & file ở chế độ 'Anyone with link'."
         );
         return;
       }
@@ -232,7 +217,6 @@ function chooseExamFromDriveFolder() {
     });
 }
 
-// Đọc nội dung JSON của 1 file theo ID
 function loadJsonFromDriveFileId(fileId, fileName) {
   const url =
     `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
@@ -246,16 +230,28 @@ function loadJsonFromDriveFileId(fileId, fileName) {
       console.error(err);
       alert(
         "Không đọc được file JSON từ Google Drive.\n" +
-        "Hãy kiểm tra:\n" +
-        "- File đã share 'Anyone with link'\n" +
-        "- File đúng định dạng JSON (mảng câu hỏi)."
+        "Kiểm tra:\n" +
+        "- File share 'Anyone with link'\n" +
+        "- Định dạng JSON là mảng câu hỏi."
       );
     });
 }
 
 // ========================
-// BẢNG SỐ CÂU
+// BẢNG SỐ CÂU – OVERLAY MOBILE/TABLET
 // ========================
+
+function openQuestionNav() {
+  const overlay = document.getElementById("questionNavOverlay");
+  if (!overlay) return;
+  overlay.classList.add("open");
+}
+
+function closeQuestionNav() {
+  const overlay = document.getElementById("questionNavOverlay");
+  if (!overlay) return;
+  overlay.classList.remove("open");
+}
 
 function renderQuestionNav() {
   const listEl = document.getElementById("questionList");
@@ -279,6 +275,10 @@ function renderQuestionNav() {
         card.classList.add("jump-highlight");
         setTimeout(() => card.classList.remove("jump-highlight"), 800);
       }
+      // CHỈ đóng panel khi là mobile + tablet (<= 800px)
+      if (window.innerWidth <= 800) {
+        closeQuestionNav();
+      }
     });
 
     listEl.appendChild(btn);
@@ -289,7 +289,6 @@ function markQuestionAnswered(index) {
   const navBtn = document.querySelector(`.qnav-item[data-index="${index}"]`);
   if (!navBtn) return;
 
-  // Nếu đã chấm rồi (đúng/sai) thì giữ màu đúng/sai
   if (navBtn.classList.contains("nav-correct") || navBtn.classList.contains("nav-incorrect")) {
     return;
   }
@@ -298,7 +297,7 @@ function markQuestionAnswered(index) {
 }
 
 // ========================
-// TẠO GIAO DIỆN CÂU HỎI
+// TẠO UI CÂU HỎI
 // ========================
 
 function generateQuiz() {
@@ -341,11 +340,10 @@ function generateQuiz() {
       const input = document.createElement("input");
       input.type = "radio";
       input.name = "q" + index;
-      input.value = opt; // lưu full text đáp án
+      input.value = opt;
       input.id = optId;
       input.className = "option-input";
 
-      // Khi chọn đáp án, đánh dấu câu này đã làm
       input.addEventListener("change", () => {
         markQuestionAnswered(index);
       });
@@ -413,7 +411,6 @@ function grade(autoSubmit) {
 
   let score = 0;
 
-  // reset màu nav
   const navItems = document.querySelectorAll(".qnav-item");
   navItems.forEach((btn) => {
     btn.classList.remove("nav-correct", "nav-incorrect", "nav-answered");
@@ -443,7 +440,6 @@ function grade(autoSubmit) {
     const correctText = (q.answer || "").trim();
     const userText = selected ? selected.value.trim() : "";
 
-    // tìm vị trí đáp án đúng và đáp án đã chọn
     const opts = q.options || [];
     const correctIndex = opts.findIndex(
       (t) => (t || "").trim() === correctText
@@ -457,7 +453,6 @@ function grade(autoSubmit) {
       userIndex >= 0 ? (letters[userIndex] || String.fromCharCode(65 + userIndex)) : "";
 
     if (userText && userText === correctText) {
-      // ĐÚNG
       score++;
       card.classList.add("correct");
       feedbackEl.classList.add("correct");
@@ -476,7 +471,6 @@ function grade(autoSubmit) {
 
       if (navBtn) navBtn.classList.add("nav-correct");
     } else {
-      // SAI hoặc không chọn
       card.classList.add("incorrect");
       feedbackEl.classList.add("incorrect");
 
@@ -580,6 +574,7 @@ function resetExam() {
 
   const listEl = document.getElementById("questionList");
   if (listEl) listEl.innerHTML = "";
+  closeQuestionNav();
 }
 
 // ========================
@@ -593,7 +588,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnReset = document.getElementById("btnReset");
   if (btnReset) btnReset.addEventListener("click", resetExam);
 
-  // Hai nút nộp bài: header (mobile/tablet) & nav (desktop)
   const btnGradeHeader = document.getElementById("btnGradeHeader");
   if (btnGradeHeader) btnGradeHeader.addEventListener("click", () => grade(false));
 
@@ -611,6 +605,33 @@ document.addEventListener("DOMContentLoaded", () => {
   if (headerToggle) {
     headerToggle.addEventListener("click", () => {
       setHeaderCollapsed(!headerCollapsed);
+    });
+  }
+
+  // Nút mở bảng câu hỏi (mobile + tablet)
+  const btnToggleNavMobile = document.getElementById("btnToggleNavMobile");
+  if (btnToggleNavMobile) {
+    btnToggleNavMobile.addEventListener("click", () => {
+      openQuestionNav();
+    });
+  }
+
+  // Đóng overlay khi bấm nút X
+  const closeBtn = document.getElementById("questionNavCloseBtn");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      closeQuestionNav();
+    });
+  }
+
+  // Đóng overlay khi bấm ra ngoài panel
+  const overlay = document.getElementById("questionNavOverlay");
+  const panel = document.getElementById("questionNavPanel");
+  if (overlay && panel) {
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) {
+        closeQuestionNav();
+      }
     });
   }
 });

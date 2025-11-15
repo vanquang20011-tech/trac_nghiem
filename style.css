@@ -14,6 +14,8 @@ body {
   color: #111827;
 }
 
+
+
 /* Header collapsed (sử dụng qua .exam-header.header-collapsed) */
 .header-collapsed {}
 
@@ -21,7 +23,7 @@ body {
 .header-toggle {
   position: absolute;
   right: 24px;
-  bottom: -14px;
+  bottom: -22px;
   border: none;
   border-radius: 999px;
   width: 28px;
@@ -219,7 +221,7 @@ input[type="number"] {
   color: #9ca3af;
 }
 
-/* Nút nộp bài ở header (cho mobile / tablet) */
+/* Nút nộp bài ở header (mobile + tablet) */
 .header-submit-btn {
   margin-top: 8px;
   width: 100%;
@@ -230,11 +232,21 @@ input[type="number"] {
   color: #ffffff;
   font-weight: 600;
   box-shadow: 0 6px 14px rgba(220, 38, 38, 0.3);
-  display: none !important; /* Desktop: ẩn */
+  display: none !important; /* mặc định ẩn trên desktop */
 }
 
 .header-submit-btn:hover {
   background: #dc2626;
+}
+
+/* Nút mở bảng câu hỏi trên header (mobile + tablet) */
+.header-question-btn {
+  margin-top: 6px;
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  border-radius: 10px;
+  display: none !important; /* mặc định ẩn trên desktop */
 }
 
 .btn {
@@ -304,7 +316,18 @@ input[type="number"] {
   color: #6b7280;
 }
 
-/* BẢNG SỐ CÂU BÊN PHẢI */
+/* WRAPPER BẢNG SỐ CÂU
+   Desktop: là cột bên phải
+   Mobile/Tablet: sẽ dùng overlay ở @media
+*/
+
+.question-nav-overlay {
+  display: block;
+  position: sticky;
+  top: 190px;
+}
+
+/* BẢNG SỐ CÂU BÊN PHẢI (desktop) */
 
 .question-nav {
   width: 280px;
@@ -312,10 +335,32 @@ input[type="number"] {
   border-radius: 14px;
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
   padding: 10px 12px 12px;
-  position: sticky;
-  top: 30%;
+  position: relative;
+  top: auto; /* dính dưới header */
   font-size: 13px;
-  z-index: 999;
+  z-index: 5;
+}
+
+.question-nav-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.question-nav-close {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+  border-radius: 999px;
+  color: #6b7280;
+}
+
+.question-nav-close:hover {
+  background: #f3f4f6;
+  color: #111827;
 }
 
 .nav-submit-btn {
@@ -605,7 +650,11 @@ input[type="number"] {
   font-weight: 700;
 }
 
-/* RESPONSIVE */
+/* =========================
+   MOBILE + TABLET (<= 800px)
+   ========================= */
+
+   
 
 @media (max-width: 800px) {
   .exam-wrapper {
@@ -652,27 +701,48 @@ input[type="number"] {
     margin-top: 14px;
   }
 
+  /* Bảng câu hỏi chuyển thành overlay */
+  .question-nav-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: none;          /* ẩn mặc định */
+    align-items: flex-end;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .question-nav-overlay.open {
+    display: flex;          /* mở khi có .open */
+  }
+
   .question-nav {
     width: 100%;
-    position: static;
-    order: -1;
-    margin-bottom: 8px;
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    max-width: 180px;
+    margin: 0 8px 8px;
+    border-radius: 16px 16px 0 0;
+    position: relative;
+    top: auto;
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.45);
   }
 
   .question-list {
     justify-content: flex-start;
   }
 
-  /* Mobile / tablet: dùng nút header, ẩn nút bên bảng câu hỏi */
-  .header-submit-btn {
-    display: inline-flex !important;
-  }
-
   .qnav-item {
     width: 30px;
     height: 30px;
     font-size: 0.85rem;
+  }
+
+  /* Mobile + tablet: dùng nút header, ẩn nav-submit */
+  .header-submit-btn {
+    display: inline-flex !important;
+  }
+
+  .header-question-btn {
+    display: inline-flex !important;
   }
 
   .nav-submit-btn {
@@ -705,8 +775,9 @@ input[type="number"] {
 
   .header-toggle {
     right: 12px;
-    bottom: -12px;
+    bottom: -14px !important;
   }
+  
 }
 
 @media (max-width: 480px) {

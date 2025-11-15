@@ -9,17 +9,17 @@
 <body>
 <div class="exam-wrapper">
 
-  <header class="exam-header">
+  <header  class="exam-header">
     <div class="exam-header-left">
       <h1 class="exam-title">Bài thi trắc nghiệm</h1>
       <p class="exam-subtitle">
         Chọn file câu hỏi, nhập thời gian &amp; bắt đầu làm bài.
       </p>
 
-      <!-- Tên bài thi (theo tên file) -->
+      <!-- Tên bài thi -->
       <p id="examName" class="exam-name" style="display:none;"></p>
 
-      <!-- Kết quả nổi bật ở đầu trang -->
+      <!-- Kết quả nổi bật -->
       <div id="topResult" class="top-result" style="display:none;"></div>
 
       <div class="controls">
@@ -52,9 +52,14 @@
       <div id="timer" class="timer timer-idle">--:--</div>
       <p class="timer-note"></p>
 
-      <!-- Nút nộp bài cho mobile / tablet -->
+      <!-- Mobile / tablet: nút nộp bài -->
       <button id="btnGradeHeader" class="btn btn-primary header-submit-btn">
         Nộp bài
+      </button>
+
+      <!-- Mobile / tablet: nút mở bảng câu hỏi -->
+      <button id="btnToggleNavMobile" class="btn btn-secondary header-question-btn">
+        📋 Câu hỏi
       </button>
 
       <button
@@ -66,10 +71,8 @@
         ▲
       </button>
     </div>
-
   </header>
 
-  <!-- BODY: bên trái là câu hỏi, bên phải là bảng số câu -->
   <main class="exam-body">
     <section class="exam-main">
       <div id="quiz">
@@ -80,17 +83,33 @@
       </div>
     </section>
 
-    <aside class="question-nav">
-      <div class="question-nav-title">Câu hỏi</div>
-      <div class="question-nav-sub">Nhấn số để nhảy tới câu.</div>
-      <div id="questionList" class="question-list">
-        <!-- JS render số câu ở đây -->
-      </div>
-      <!-- Nút nộp bài cho desktop -->
-      <button id="btnGradeNav" class="btn btn-primary nav-submit-btn">
-        Nộp bài
-      </button>
-    </aside>
+    <!-- Wrapper bảng câu hỏi: desktop = sidebar, mobile = overlay -->
+    <div id="questionNavOverlay" class="question-nav-overlay">
+      <aside class="question-nav" id="questionNavPanel">
+        <div class="question-nav-header">
+          <div>
+            <div class="question-nav-title">Câu hỏi</div>
+            <div class="question-nav-sub">Nhấn số để nhảy tới câu.</div>
+          </div>
+          <button
+            id="questionNavCloseBtn"
+            class="question-nav-close"
+            aria-label="Đóng bảng câu hỏi"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div id="questionList" class="question-list">
+          <!-- JS render số câu -->
+        </div>
+
+        <!-- Nút nộp bài (desktop) -->
+        <button id="btnGradeNav" class="btn btn-primary nav-submit-btn">
+          Nộp bài
+        </button>
+      </aside>
+    </div>
   </main>
 
   <footer class="exam-footer">
@@ -101,10 +120,8 @@
       <p class="result-text" id="result"></p>
     </div>
   </footer>
-
 </div>
 
-<!-- Google API + app -->
 <script src="https://apis.google.com/js/api.js"></script>
 <script src="app.js"></script>
 </body>
