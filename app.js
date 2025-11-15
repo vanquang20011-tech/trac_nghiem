@@ -9,16 +9,17 @@ let examFinished = false;
 let examTotalSeconds = 0; // để tính thời gian làm thực tế
 
 // ========================
-// GOOGLE DRIVE PICKER CONFIG
+// GOOGLE DRIVE – LẤY ĐỀ TỪ 1 THƯ MỤC PUBLIC
 // ========================
 
 const API_KEY = "AIzaSyAry4xCdznJGeWvTi1NtId0q6YgPfZdwrg";
-const CLIENT_ID = "196533752702-und50rlogf3m1lqi93g8tomojj2t29oo.apps.googleusercontent.com";
-const SCOPES = ["https://www.googleapis.com/auth/drive.readonly"];
-let oauthToken = null;
+
+// Nếu bạn muốn cố định 1 thư mục thì điền luôn ID vào đây.
+// VD: const DRIVE_FOLDER_ID = "XXXXXXXXXXXXXXX";
+const DRIVE_FOLDER_ID = ""; // để trống: mỗi lần bấm sẽ hỏi link thư mục
 
 // ========================
-// TIỆN ÍCH
+// TIỆN ÍCH GIAO DIỆN
 // ========================
 
 let headerCollapsed = false;
@@ -93,7 +94,7 @@ function startTimer() {
     if (remainingSeconds <= 0) {
       clearInterval(timerInterval);
       if (!examFinished) {
-        grade(true); // auto nộp
+        grade(true); // auto nộp khi hết giờ
       }
       return;
     }
@@ -103,8 +104,10 @@ function startTimer() {
 }
 
 // ========================
-// LOAD FILE CÂU HỎI TỪ LOCAL
+// ÁP DỤNG DỮ LIỆU ĐỀ THI
+// (JSON dạng: [{question, options: [..], answer}, ...])
 // ========================
+
 function applyExamData(data, examNameLabel) {
   if (!Array.isArray(data) || data.length === 0) {
     alert("File không đúng định dạng hoặc không có câu hỏi!");
@@ -114,7 +117,7 @@ function applyExamData(data, examNameLabel) {
   questionsData = data;
   examFinished = false;
 
-  // tên bài thi
+  // Tên bài thi
   const examNameEl = document.getElementById("examName");
   if (examNameEl) {
     examNameEl.textContent = examNameLabel || "Bài thi trắc nghiệm";
@@ -123,7 +126,6 @@ function applyExamData(data, examNameLabel) {
 
   generateQuiz();
   startTimer();
-
   setHeaderCollapsed(true); // tạo đề xong thì thu gọn header
 
   document.getElementById("result").textContent = "";
@@ -140,6 +142,10 @@ function applyExamData(data, examNameLabel) {
   }
 }
 
+// ========================
+// LOAD FILE CÂU HỎI TỪ MÁY
+// ========================
+
 function loadFile() {
   const fileInput = document.getElementById("fileInput");
   const file = fileInput.files[0];
@@ -152,7 +158,7 @@ function loadFile() {
   reader.onload = function (e) {
     try {
       const data = JSON.parse(e.target.result);
-      const fileName = file.name ? file.name.replace(/\.json$/i, "") : "Đề thi từ file";
+      const fileName = file.name.replace(/\.json$/i, "");
       applyExamData(data, "Bài thi: " + fileName);
     } catch (err) {
       console.error(err);
@@ -163,72 +169,95 @@ function loadFile() {
 }
 
 // ========================
-// GOOGLE DRIVE PICKER
+// GOOGLE DRIVE – LẤY ĐỀ TỪ THƯ MỤC PUBLIC
 // ========================
 
-function initAuthAndPicker() {
-  if (!window.gapi) {
-    alert("Google API chưa tải xong. Hãy tải lại trang và thử lại.");
-    return;
+// Lấy folderId từ URL (nếu dán nguyên link Drive)
+function getFolderIdFromUrl(url) {
+  const m = url.match(/folders\/([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : url.trim();
+}
+
+// Bấm nút "Chọn đề từ Google Drive"
+function chooseExamFromDriveFolder() {
+  let folderId = DRIVE_FOLDER_ID;
+
+  if (!folderId) {
+    const link = prompt(
+      "Dán link thư mục Google Drive (hoặc chỉ ID thư mục):"
+    );
+    if (!link) return;
+    folderId = getFolderIdFromUrl(link);
   }
 
-  gapi.load("client:auth2", () => {
-    gapi.auth2
-      .init({
-        client_id: CLIENT_ID,
-        scope: SCOPES.join(" "),
-      })
-      .then(() => {
-        const auth = gapi.auth2.getAuthInstance();
-        auth.signIn().then((googleUser) => {
-          oauthToken = googleUser.getAuthResponse().access_token;
-          openPicker();
-        });
-      });
-  });
-}
+  const q = `'${folderId}' in parents and mimeType='application/json' and trashed=false`;
+  const url =
+    "https://www.googleapis.com/drive/v3/files" +
+    "?q=" + encodeURIComponent(q) +
+    "&fields=files(id,name)" +
+    "&key=" + API_KEY;
 
-function openPicker() {
-  gapi.load("picker", () => {
-    const view = new google.picker.View(google.picker.ViewId.DOCS);
-    view.setMimeTypes("application/json");
-
-    const picker = new google.picker.PickerBuilder()
-      .setOAuthToken(oauthToken)
-      .setDeveloperKey(API_KEY)
-      .addView(view)
-      .setCallback(pickerCallback)
-      .build();
-
-    picker.setVisible(true);
-  });
-}
-
-function pickerCallback(data) {
-  if (data.action === google.picker.Action.PICKED) {
-    const file = data.docs[0];
-    const fileId = file.id;
-    const fileName = file.name || "Đề thi từ Google Drive";
-    loadJsonFromDrive(fileId, fileName);
-  }
-}
-
-function loadJsonFromDrive(fileId, fileName) {
-  fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-    headers: { Authorization: "Bearer " + oauthToken },
-  })
+  fetch(url)
     .then((r) => r.json())
-    .then((json) => {
-      applyExamData(json, "Bài thi (Drive): " + fileName);
+    .then((data) => {
+      if (!data.files || !data.files.length) {
+        alert(
+          "Không tìm thấy file JSON nào trong thư mục.\n" +
+          "Nhớ đặt thư mục & file ở chế độ 'Anyone with link' (Bất kỳ ai có đường liên kết)."
+        );
+        return;
+      }
+
+      const listText = data.files
+        .map((f, idx) => `${idx + 1}. ${f.name}`)
+        .join("\n");
+
+      const choice = prompt(
+        "Chọn đề bằng cách nhập số tương ứng:\n\n" + listText
+      );
+      const index = parseInt(choice, 10) - 1;
+      if (isNaN(index) || index < 0 || index >= data.files.length) {
+        alert("Lựa chọn không hợp lệ.");
+        return;
+      }
+
+      const picked = data.files[index];
+      loadJsonFromDriveFileId(picked.id, picked.name);
     })
     .catch((err) => {
       console.error(err);
-      alert("Không đọc được file từ Google Drive. Kiểm tra lại quyền chia sẻ và định dạng JSON.");
+      alert(
+        "Không lấy được danh sách file từ thư mục.\n" +
+        "Kiểm tra lại:\n" +
+        "- Thư mục đã chia sẻ 'Anyone with link'\n" +
+        "- API key còn hoạt động."
+      );
+    });
+}
+
+// Đọc nội dung JSON của 1 file theo ID
+function loadJsonFromDriveFileId(fileId, fileName) {
+  const url =
+    `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${API_KEY}`;
+
+  fetch(url)
+    .then((r) => r.json())
+    .then((json) => {
+      applyExamData(json, "Bài thi (Drive): " + (fileName || ""));
+    })
+    .catch((err) => {
+      console.error(err);
+      alert(
+        "Không đọc được file JSON từ Google Drive.\n" +
+        "Hãy kiểm tra:\n" +
+        "- File đã share 'Anyone with link'\n" +
+        "- File đúng định dạng JSON (mảng câu hỏi)."
+      );
     });
 }
 
 // ========================
-// RENDER BẢNG SỐ CÂU
+// BẢNG SỐ CÂU
 // ========================
 
 function renderQuestionNav() {
@@ -267,6 +296,8 @@ function generateQuiz() {
   const quizDiv = document.getElementById("quiz");
   quizDiv.innerHTML = "";
 
+  const letters = ["A", "B", "C", "D", "E", "F", "G"];
+
   questionsData.forEach((q, index) => {
     const card = document.createElement("div");
     card.className = "question-card";
@@ -293,7 +324,7 @@ function generateQuiz() {
     const optionsDiv = document.createElement("div");
     optionsDiv.className = "options";
 
-    q.options.forEach((opt, i) => {
+    (q.options || []).forEach((opt, i) => {
       const optId = `q${index}_opt_${i}`;
       const wrapper = document.createElement("div");
       wrapper.className = "option";
@@ -301,7 +332,7 @@ function generateQuiz() {
       const input = document.createElement("input");
       input.type = "radio";
       input.name = "q" + index;
-      input.value = opt.key;
+      input.value = opt; // lưu full text đáp án
       input.id = optId;
       input.className = "option-input";
 
@@ -318,7 +349,8 @@ function generateQuiz() {
 
       const textSpan = document.createElement("div");
       textSpan.className = "option-text";
-      textSpan.textContent = `${opt.key}. ${opt.text}`;
+      const letter = letters[i] || String.fromCharCode(65 + i);
+      textSpan.textContent = `${letter}. ${opt}`;
 
       label.appendChild(bullet);
       label.appendChild(textSpan);
@@ -373,6 +405,8 @@ function grade(autoSubmit) {
     btn.classList.remove("nav-correct", "nav-incorrect");
   });
 
+  const letters = ["A", "B", "C", "D", "E", "F", "G"];
+
   questionsData.forEach((q, i) => {
     const card = document.querySelector(`.question-card[data-index="${i}"]`);
     if (!card) return;
@@ -392,43 +426,66 @@ function grade(autoSubmit) {
     const selected = document.querySelector(`input[name="q${i}"]:checked`);
     const navBtn = document.querySelector(`.qnav-item[data-index="${i}"]`);
 
-    if (selected && selected.value === q.answer) {
+    const correctText = (q.answer || "").trim();
+    const userText = selected ? selected.value.trim() : "";
+
+    // tìm vị trí đáp án đúng và đáp án đã chọn
+    const opts = q.options || [];
+    const correctIndex = opts.findIndex(
+      (t) => (t || "").trim() === correctText
+    );
+    const userIndex = opts.findIndex(
+      (t) => (t || "").trim() === userText
+    );
+    const correctLetter =
+      correctIndex >= 0 ? (letters[correctIndex] || String.fromCharCode(65 + correctIndex)) : "?";
+    const userLetter =
+      userIndex >= 0 ? (letters[userIndex] || String.fromCharCode(65 + userIndex)) : "";
+
+    if (userText && userText === correctText) {
+      // ĐÚNG
       score++;
       card.classList.add("correct");
       feedbackEl.classList.add("correct");
-      feedbackEl.textContent = "✔ Chính xác. Bạn nhớ rất tốt!";
+      feedbackEl.textContent = `✔ Chính xác. Đáp án đúng là ${correctLetter}. Bạn nhớ rất tốt!`;
 
-      optionsWrapper.forEach((wrap) => {
+      optionsWrapper.forEach((wrap, idx) => {
         const input = wrap.querySelector("input");
         const label = wrap.querySelector(".option-label");
-        if (input.value === q.answer) {
+        if ((opts[idx] || "").trim() === correctText) {
           label.classList.add("correct");
+        }
+        if (input === selected) {
+          input.disabled = true;
         }
       });
 
       if (navBtn) navBtn.classList.add("nav-correct");
     } else {
+      // SAI hoặc không chọn
       card.classList.add("incorrect");
       feedbackEl.classList.add("incorrect");
 
       let msg = "✗ Sai. ";
-      if (!selected) {
-        msg += "Bạn chưa chọn đáp án. Đáp án đúng là: " + q.answer;
+      if (!userText) {
+        msg += `Bạn chưa chọn đáp án. Đáp án đúng là ${correctLetter}.`;
       } else {
-        msg += `Đáp án bạn chọn là ${selected.value}, đáp án đúng là ${q.answer}.`;
+        msg += `Bạn chọn ${userLetter || "?"}, đáp án đúng là ${correctLetter}.`;
       }
       feedbackEl.textContent = msg;
 
-      optionsWrapper.forEach((wrap) => {
+      optionsWrapper.forEach((wrap, idx) => {
         const input = wrap.querySelector("input");
         const label = wrap.querySelector(".option-label");
+        const optText = (opts[idx] || "").trim();
 
-        if (selected && input === selected && selected.value !== q.answer) {
+        if (userText && input === selected && userText !== correctText) {
           label.classList.add("incorrect");
         }
-        if (input.value === q.answer) {
+        if (optText === correctText) {
           label.classList.add("correct");
         }
+        input.disabled = true;
       });
 
       if (navBtn) navBtn.classList.add("nav-incorrect");
@@ -440,35 +497,27 @@ function grade(autoSubmit) {
   const percent = Math.round((score / total) * 100);
   const rank = getRank(percent);
 
-  // Thời gian làm thực tế
-  const usedSeconds = examTotalSeconds > 0
-    ? examTotalSeconds - remainingSeconds
-    : 0;
-  const usedTimeStr = examTotalSeconds > 0
-    ? formatTime(usedSeconds)
-    : "--:--";
+  const usedSeconds =
+    examTotalSeconds > 0 ? examTotalSeconds - remainingSeconds : 0;
+  const usedTimeStr =
+    examTotalSeconds > 0 ? formatTime(usedSeconds) : "--:--";
 
-  // Hiện ở cuối trang
   const resultEl = document.getElementById("result");
   resultEl.innerHTML =
     `Bạn làm đúng <span>${score}/${total}</span> câu ` +
     `(${percent}%). Sai <span>${wrong}</span> câu. Xếp loại: <span>${rank}</span>. ` +
     `Thời gian làm: <span>${usedTimeStr}</span>.`;
 
-  // Kết quả nổi bật ở trên đầu
   const topResultEl = document.getElementById("topResult");
   if (topResultEl) {
     topResultEl.style.display = "inline-flex";
     topResultEl.classList.remove("bad");
-
     topResultEl.innerHTML =
       `🎓 Hoàn thành bài thi – <span>${score}/${total}</span> câu đúng ` +
       `(${percent}%) · ${rank} · Thời gian: ${usedTimeStr}`;
-
     if (percent < 50) {
       topResultEl.classList.add("bad");
     }
-
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -498,7 +547,7 @@ function resetExam() {
   setHeaderCollapsed(false);
 
   document.getElementById("quiz").innerHTML =
-    '<p class="muted">Chưa có đề. Hãy chọn file <b>.json</b> và nhập thời gian rồi bấm <b>“Tạo đề &amp; bắt đầu thi”</b>.</p>';
+    '<p class="muted">Chưa có đề. Hãy chọn file <b>.json</b> hoặc lấy từ Google Drive, nhập thời gian rồi bấm <b>“Tạo đề &amp; bắt đầu thi”</b>.</p>';
   document.getElementById("result").textContent = "";
   document.getElementById("noteArea").textContent = "";
   const timerEl = document.getElementById("timer");
@@ -542,7 +591,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnSelectDrive = document.getElementById("btnSelectDrive");
   if (btnSelectDrive) {
     btnSelectDrive.addEventListener("click", () => {
-      initAuthAndPicker();
+      chooseExamFromDriveFolder();
     });
   }
 
