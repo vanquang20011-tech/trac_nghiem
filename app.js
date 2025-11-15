@@ -9,6 +9,15 @@ let examFinished = false;
 let examTotalSeconds = 0; // để tính thời gian làm thực tế
 
 // ========================
+// GOOGLE DRIVE PICKER CONFIG
+// ========================
+
+const API_KEY = "AIzaSyAry4xCdznJGeWvTi1NtId0q6YgPfZdwrg";
+const CLIENT_ID = "196533752702-und50rlogf3m1lqi93g8tomojj2t29oo.apps.googleusercontent.com";
+const SCOPES = ["https://www.googleapis.com/auth/drive.readonly"];
+let oauthToken = null;
+
+// ========================
 // TIỆN ÍCH
 // ========================
 
@@ -29,8 +38,6 @@ function setHeaderCollapsed(collapse) {
     toggleBtn.textContent = "▲"; // đang mở, bấm để thu
   }
 }
-
-
 
 function formatTime(sec) {
   const m = Math.floor(sec / 60);
@@ -80,26 +87,58 @@ function startTimer() {
 
   examTotalSeconds = minutes * 60;
   remainingSeconds = examTotalSeconds;
-
   updateTimerDisplay();
 
   timerInterval = setInterval(() => {
-    remainingSeconds--;
-    if (remainingSeconds < 0) remainingSeconds = 0;
-    updateTimerDisplay();
-
     if (remainingSeconds <= 0) {
       clearInterval(timerInterval);
       if (!examFinished) {
-        grade(true); // tự nộp khi hết giờ
+        grade(true); // auto nộp
       }
+      return;
     }
+    remainingSeconds--;
+    updateTimerDisplay();
   }, 1000);
 }
 
 // ========================
-// LOAD FILE CÂU HỎI
+// LOAD FILE CÂU HỎI TỪ LOCAL
 // ========================
+function applyExamData(data, examNameLabel) {
+  if (!Array.isArray(data) || data.length === 0) {
+    alert("File không đúng định dạng hoặc không có câu hỏi!");
+    return;
+  }
+
+  questionsData = data;
+  examFinished = false;
+
+  // tên bài thi
+  const examNameEl = document.getElementById("examName");
+  if (examNameEl) {
+    examNameEl.textContent = examNameLabel || "Bài thi trắc nghiệm";
+    examNameEl.style.display = "block";
+  }
+
+  generateQuiz();
+  startTimer();
+
+  setHeaderCollapsed(true); // tạo đề xong thì thu gọn header
+
+  document.getElementById("result").textContent = "";
+  document.getElementById("noteArea").textContent =
+    "Bài thi đã bắt đầu. Đừng quên nộp bài trước khi hết giờ!";
+  const btnGrade = document.getElementById("btnGrade");
+  if (btnGrade) btnGrade.style.display = "inline-flex";
+
+  const topResultEl = document.getElementById("topResult");
+  if (topResultEl) {
+    topResultEl.style.display = "none";
+    topResultEl.textContent = "";
+    topResultEl.classList.remove("bad");
+  }
+}
 
 function loadFile() {
   const fileInput = document.getElementById("fileInput");
@@ -113,42 +152,79 @@ function loadFile() {
   reader.onload = function (e) {
     try {
       const data = JSON.parse(e.target.result);
-      if (!Array.isArray(data) || data.length === 0) {
-        alert("File không đúng định dạng hoặc không có câu hỏi!");
-        return;
-      }
-
-      questionsData = data;
-      examFinished = false;
-
-      // tên bài thi theo tên file
-      const examNameEl = document.getElementById("examName");
-      const fileName = file.name.replace(/\.json$/i, "");
-      examNameEl.textContent = "Bài thi: " + fileName;
-      examNameEl.style.display = "block";
-
-      generateQuiz();
-      startTimer();
-
-      setHeaderCollapsed(true); // tạo đề xong thì thu gọn header
-
-      document.getElementById("result").textContent = "";
-      document.getElementById("noteArea").textContent =
-        "Bài thi đã bắt đầu. Đừng quên nộp bài trước khi hết giờ!";
-      document.getElementById("btnGrade").style.display = "inline-flex";
-
-      const topResultEl = document.getElementById("topResult");
-      if (topResultEl) {
-        topResultEl.style.display = "none";
-        topResultEl.textContent = "";
-        topResultEl.classList.remove("bad");
-      }
+      const fileName = file.name ? file.name.replace(/\.json$/i, "") : "Đề thi từ file";
+      applyExamData(data, "Bài thi: " + fileName);
     } catch (err) {
       console.error(err);
       alert("Lỗi đọc file. Hãy kiểm tra lại định dạng JSON.");
     }
   };
   reader.readAsText(file);
+}
+
+// ========================
+// GOOGLE DRIVE PICKER
+// ========================
+
+function initAuthAndPicker() {
+  if (!window.gapi) {
+    alert("Google API chưa tải xong. Hãy tải lại trang và thử lại.");
+    return;
+  }
+
+  gapi.load("client:auth2", () => {
+    gapi.auth2
+      .init({
+        client_id: CLIENT_ID,
+        scope: SCOPES.join(" "),
+      })
+      .then(() => {
+        const auth = gapi.auth2.getAuthInstance();
+        auth.signIn().then((googleUser) => {
+          oauthToken = googleUser.getAuthResponse().access_token;
+          openPicker();
+        });
+      });
+  });
+}
+
+function openPicker() {
+  gapi.load("picker", () => {
+    const view = new google.picker.View(google.picker.ViewId.DOCS);
+    view.setMimeTypes("application/json");
+
+    const picker = new google.picker.PickerBuilder()
+      .setOAuthToken(oauthToken)
+      .setDeveloperKey(API_KEY)
+      .addView(view)
+      .setCallback(pickerCallback)
+      .build();
+
+    picker.setVisible(true);
+  });
+}
+
+function pickerCallback(data) {
+  if (data.action === google.picker.Action.PICKED) {
+    const file = data.docs[0];
+    const fileId = file.id;
+    const fileName = file.name || "Đề thi từ Google Drive";
+    loadJsonFromDrive(fileId, fileName);
+  }
+}
+
+function loadJsonFromDrive(fileId, fileName) {
+  fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+    headers: { Authorization: "Bearer " + oauthToken },
+  })
+    .then((r) => r.json())
+    .then((json) => {
+      applyExamData(json, "Bài thi (Drive): " + fileName);
+    })
+    .catch((err) => {
+      console.error(err);
+      alert("Không đọc được file từ Google Drive. Kiểm tra lại quyền chia sẻ và định dạng JSON.");
+    });
 }
 
 // ========================
@@ -170,7 +246,10 @@ function renderQuestionNav() {
     btn.addEventListener("click", () => {
       const card = document.querySelector(`.question-card[data-index="${i}"]`);
       if (card) {
-        card.scrollIntoView({ behavior: "smooth", block: "start" });
+        card.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
         card.classList.add("jump-highlight");
         setTimeout(() => card.classList.remove("jump-highlight"), 800);
       }
@@ -188,82 +267,90 @@ function generateQuiz() {
   const quizDiv = document.getElementById("quiz");
   quizDiv.innerHTML = "";
 
-  questionsData.forEach((q, i) => {
+  questionsData.forEach((q, index) => {
     const card = document.createElement("div");
     card.className = "question-card";
-    card.dataset.index = i;
+    card.dataset.index = String(index);
 
     const header = document.createElement("div");
     header.className = "question-header";
 
-    const left = document.createElement("div");
-    left.innerHTML = `
-      <div class="question-number">Câu ${i + 1}</div>
-      <div class="question-text">${q.question}</div>
-      <div class="question-meta">Chọn 1 đáp án đúng</div>
-    `;
+    const number = document.createElement("div");
+    number.className = "question-number";
+    number.textContent = "CÂU " + (index + 1);
 
-    header.appendChild(left);
-    card.appendChild(header);
+    const meta = document.createElement("div");
+    meta.className = "question-meta";
+    meta.textContent = q.meta || "";
+
+    header.appendChild(number);
+    header.appendChild(meta);
+
+    const text = document.createElement("div");
+    text.className = "question-text";
+    text.textContent = q.question;
 
     const optionsDiv = document.createElement("div");
     optionsDiv.className = "options";
 
-    q.options.forEach((opt) => {
-      const optionId = `q${i}-${Math.random().toString(36).slice(2, 8)}`;
-
+    q.options.forEach((opt, i) => {
+      const optId = `q${index}_opt_${i}`;
       const wrapper = document.createElement("div");
       wrapper.className = "option";
 
       const input = document.createElement("input");
       input.type = "radio";
-      input.name = `q${i}`;
-      input.value = opt;
-      input.id = optionId;
+      input.name = "q" + index;
+      input.value = opt.key;
+      input.id = optId;
       input.className = "option-input";
 
       const label = document.createElement("label");
+      label.setAttribute("for", optId);
       label.className = "option-label";
-      label.setAttribute("for", optionId);
 
-      label.innerHTML = `
-        <div class="option-bullet">
-          <div class="option-bullet-inner"></div>
-        </div>
-        <div class="option-text">${opt}</div>
-      `;
+      const bullet = document.createElement("div");
+      bullet.className = "option-bullet";
+
+      const bulletInner = document.createElement("div");
+      bulletInner.className = "option-bullet-inner";
+      bullet.appendChild(bulletInner);
+
+      const textSpan = document.createElement("div");
+      textSpan.className = "option-text";
+      textSpan.textContent = `${opt.key}. ${opt.text}`;
+
+      label.appendChild(bullet);
+      label.appendChild(textSpan);
 
       wrapper.appendChild(input);
       wrapper.appendChild(label);
       optionsDiv.appendChild(wrapper);
     });
 
-    card.appendChild(optionsDiv);
-
     const feedback = document.createElement("div");
     feedback.className = "feedback";
-    feedback.id = `feedback-${i}`;
+    feedback.id = `feedback-${index}`;
+
+    card.appendChild(header);
+    card.appendChild(text);
+    card.appendChild(optionsDiv);
     card.appendChild(feedback);
 
     quizDiv.appendChild(card);
   });
 
-  const allInputs = quizDiv.querySelectorAll("input[type=radio]");
-  allInputs.forEach((inp) => {
-    inp.disabled = false;
-  });
-
-  // tạo lại bảng số câu
   renderQuestionNav();
 }
 
 // ========================
-// XẾP LOẠI THEO %
+// XẾP LOẠI
 // ========================
 
 function getRank(percent) {
-  if (percent >= 85) return "Giỏi";
-  if (percent >= 70) return "Khá";
+  if (percent >= 90) return "Xuất sắc";
+  if (percent >= 80) return "Giỏi";
+  if (percent >= 65) return "Khá";
   if (percent >= 50) return "Trung bình";
   return "Yếu";
 }
@@ -288,11 +375,12 @@ function grade(autoSubmit) {
 
   questionsData.forEach((q, i) => {
     const card = document.querySelector(`.question-card[data-index="${i}"]`);
-    const feedbackEl = document.getElementById(`feedback-${i}`);
-    const navBtn = document.querySelector(`.qnav-item[data-index="${i}"]`);
-
+    if (!card) return;
     card.classList.remove("correct", "incorrect");
-    feedbackEl.classList.remove("correct", "incorrect");
+
+    const feedbackEl = document.getElementById(`feedback-${i}`);
+    if (!feedbackEl) return;
+    feedbackEl.className = "feedback";
     feedbackEl.textContent = "";
 
     const optionsWrapper = card.querySelectorAll(".option");
@@ -302,6 +390,7 @@ function grade(autoSubmit) {
     });
 
     const selected = document.querySelector(`input[name="q${i}"]:checked`);
+    const navBtn = document.querySelector(`.qnav-item[data-index="${i}"]`);
 
     if (selected && selected.value === q.answer) {
       score++;
@@ -323,12 +412,11 @@ function grade(autoSubmit) {
       feedbackEl.classList.add("incorrect");
 
       let msg = "✗ Sai. ";
-      if (selected) {
-        msg += `Bạn chọn: "${selected.value}". `;
+      if (!selected) {
+        msg += "Bạn chưa chọn đáp án. Đáp án đúng là: " + q.answer;
       } else {
-        msg += "Bạn chưa chọn đáp án. ";
+        msg += `Đáp án bạn chọn là ${selected.value}, đáp án đúng là ${q.answer}.`;
       }
-      msg += `Đáp án đúng là: "${q.answer}". Hãy đọc lại để khắc sâu hơn.`;
       feedbackEl.textContent = msg;
 
       optionsWrapper.forEach((wrap) => {
@@ -363,11 +451,11 @@ function grade(autoSubmit) {
   // Hiện ở cuối trang
   const resultEl = document.getElementById("result");
   resultEl.innerHTML =
-    `Kết quả: <span>${score}/${total}</span> câu đúng ` +
-    `(${percent}%). Sai ${wrong} câu – Xếp loại: <b>${rank}</b>. ` +
-    `Thời gian làm: ${usedTimeStr}.`;
+    `Bạn làm đúng <span>${score}/${total}</span> câu ` +
+    `(${percent}%). Sai <span>${wrong}</span> câu. Xếp loại: <span>${rank}</span>. ` +
+    `Thời gian làm: <span>${usedTimeStr}</span>.`;
 
-  // Hiện nổi bật trên đầu
+  // Kết quả nổi bật ở trên đầu
   const topResultEl = document.getElementById("topResult");
   if (topResultEl) {
     topResultEl.style.display = "inline-flex";
@@ -391,7 +479,8 @@ function grade(autoSubmit) {
     ? "Hết giờ, bài đã được tự động nộp. Hãy xem kỹ lại những câu sai để nhớ lâu hơn."
     : "Bạn đã nộp bài. Hãy xem lại các câu sai và đọc kỹ đáp án đúng để củng cố trí nhớ.";
 
-  document.getElementById("btnGrade").style.display = "none";
+  const btnGrade = document.getElementById("btnGrade");
+  if (btnGrade) btnGrade.style.display = "none";
 }
 
 // ========================
@@ -415,7 +504,9 @@ function resetExam() {
   const timerEl = document.getElementById("timer");
   timerEl.textContent = "--:--";
   timerEl.className = "timer timer-idle";
-  document.getElementById("btnGrade").style.display = "none";
+
+  const btnGrade = document.getElementById("btnGrade");
+  if (btnGrade) btnGrade.style.display = "none";
 
   const topResultEl = document.getElementById("topResult");
   if (topResultEl) {
@@ -439,9 +530,21 @@ function resetExam() {
 // ========================
 
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("btnStart").addEventListener("click", loadFile);
-  document.getElementById("btnReset").addEventListener("click", resetExam);
-  document.getElementById("btnGrade").addEventListener("click", () => grade(false));
+  const btnStart = document.getElementById("btnStart");
+  if (btnStart) btnStart.addEventListener("click", loadFile);
+
+  const btnReset = document.getElementById("btnReset");
+  if (btnReset) btnReset.addEventListener("click", resetExam);
+
+  const btnGrade = document.getElementById("btnGrade");
+  if (btnGrade) btnGrade.addEventListener("click", () => grade(false));
+
+  const btnSelectDrive = document.getElementById("btnSelectDrive");
+  if (btnSelectDrive) {
+    btnSelectDrive.addEventListener("click", () => {
+      initAuthAndPicker();
+    });
+  }
 
   const headerToggle = document.getElementById("headerToggle");
   if (headerToggle) {
@@ -450,5 +553,3 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
-
-

@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Bài thi trắc nghiệm</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -36,10 +37,14 @@
           <button class="btn btn-primary" id="btnStart">
             📂 Tạo đề &amp; bắt đầu thi
           </button>
+          <button class="btn btn-secondary" id="btnSelectDrive">
+            ☁ Chọn đề từ Google Drive
+          </button>
           <button class="btn btn-secondary" id="btnReset">
             🔄 Làm lại
           </button>
         </div>
+
       </div>
 
     </div>
@@ -48,20 +53,27 @@
       <div class="timer-label">Thời gian còn lại</div>
       <div id="timer" class="timer timer-idle">--:--</div>
       <p class="timer-note"></p>
-      <button type="button" id="headerToggle" class="header-toggle" title="Thu gọn / mở rộng thanh trên cùng">
-      ▲
-    </button>
+      <button
+        type="button"
+        id="headerToggle"
+        class="header-toggle"
+        title="Thu gọn / mở rộng thanh trên cùng"
+      >
+        ▲
+      </button>
     </div>
-    
+
   </header>
 
   <!-- BODY: bên trái là câu hỏi, bên phải là bảng số câu -->
   <main class="exam-body">
-    <section class="exam-main" id="quiz">
-      <p class="muted">
-        Chưa có đề. Hãy chọn file <b>.json</b> và nhập thời gian rồi bấm
-        <b>“Tạo đề &amp; bắt đầu thi”</b>.
-      </p>
+    <section class="exam-main">
+      <div id="quiz">
+        <p class="muted">
+          Chưa có đề. Hãy chọn file <b>.json</b> và nhập thời gian rồi bấm
+          <b>“Tạo đề &amp; bắt đầu thi”</b>.
+        </p>
+      </div>
     </section>
 
     <aside class="question-nav">
@@ -71,16 +83,13 @@
         <!-- JS render số câu ở đây -->
       </div>
       <button id="btnGrade" class="btn btn-primary nav-submit-btn">
-    Nộp bài
-  </button>
+        Nộp bài
+      </button>
     </aside>
   </main>
 
   <footer class="exam-footer">
     <div class="footer-left">
-      <button id="btnGrade" class="btn btn-primary btn-large" style="display:none;">
-        ✅ Nộp bài &amp; chấm điểm
-      </button>
       <p class="muted" id="noteArea"></p>
     </div>
     <div class="footer-right">
@@ -90,6 +99,8 @@
 
 </div>
 
+<!-- Google API + app -->
+<script src="https://apis.google.com/js/api.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -1,11 +1,10 @@
+html {
+  font-size: 16.5px;
+}
+
 * {
   box-sizing: border-box;
 }
-
-html {
-  font-size: 17px;   /* mặc định 16px → tăng 1 bước */
-}
-
 
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -15,10 +14,8 @@ body {
   color: #111827;
 }
 
-/* Header collapsed */
-.header-collapsed {
-  height: 118px !important;
-}
+/* Header collapsed (marker class, style áp dụng qua .exam-header.header-collapsed) */
+.header-collapsed {}
 
 /* Header expanded */
 .header-expanded {
@@ -26,11 +23,11 @@ body {
   transition: height 0.25s ease;
 }
 
-/* Toggle button */
+/* Toggle button: mũi tên nằm dưới mép header */
 .header-toggle {
   position: absolute;
-  right: 24px;       /* sát mép phải header */
-  bottom: -14px;     /* nhô xuống dưới 1 chút (âm là nằm dưới đường viền) */
+  right: 24px;
+  bottom: -14px;
   border: none;
   border-radius: 999px;
   width: 28px;
@@ -43,15 +40,13 @@ body {
   background: #ffffff;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
   transition: background 0.15s, transform 0.06s, box-shadow 0.15s;
-  z-index: 20;       /* cao hơn header một chút để không bị che */
+  z-index: 20;
 }
 
 .header-toggle:hover {
   background: #f3f4f6;
   transform: translateY(-1px);
 }
-
-
 
 .header-title-small {
   font-size: 16px;
@@ -60,9 +55,8 @@ body {
   margin-top: 10px;
 }
 
-
 .exam-wrapper {
-  max-width: 1180px;
+  max-width: 950px;
   margin: 24px auto 40px;
   padding: 0 16px;
 }
@@ -77,12 +71,11 @@ body {
   justify-content: space-between;
   align-items: flex-start;
   gap: 24px;
-  position: sticky; /* rất quan trọng: để sticky + làm mốc cho nút */
+  position: sticky;
   top: 0;
   z-index: 10;
   transition: padding 0.2s ease;
 }
-
 
 /* Khi header thu gọn sau khi bắt đầu thi */
 .exam-header.header-collapsed {
@@ -97,12 +90,9 @@ body {
 
 /* Title nhỏ lại chút khi thu gọn */
 .exam-header.header-collapsed .exam-title {
-  font-size: 1.5rem;
+  font-size: 17px;
   margin-bottom: 0;
 }
-
-
-
 
 .exam-header-left {
   flex: 1;
@@ -205,6 +195,7 @@ input[type="number"] {
 .exam-header-right {
   min-width: 150px;
   text-align: right;
+  position: relative;
 }
 
 .timer-label {
@@ -317,7 +308,7 @@ input[type="number"] {
   box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
   padding: 10px 12px 12px;
   position: sticky;
-  top: 35%;
+  top: 30%;
   font-size: 13px;
   z-index: 999;
 }
@@ -328,6 +319,13 @@ input[type="number"] {
   font-size: 16px;
   width: 100%;
   border-radius: 10px;
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.nav-submit-btn:hover {
+  background: #dc2626;
+  transition: background 0.2s ease;
 }
 
 .question-nav-title {
@@ -394,14 +392,6 @@ input[type="number"] {
   position: relative;
   overflow: hidden;
   scroll-margin-top: 140px;
-}
-
-.nav-submit-btn {
-  color: white;
-}
-.nav-submit-btn:hover {
-  background: #dc2626;
-  transition: all 0.5s;
 }
 
 .question-card::before {
@@ -489,7 +479,7 @@ input[type="number"] {
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 14px;
   transition: background 0.15s, border 0.15s, transform 0.06s, box-shadow 0.15s;
 }
 
@@ -572,7 +562,7 @@ input[type="number"] {
 
 .feedback {
   margin-top: 7px;
-  font-size: 0.7rem;
+  font-size: 13px;
 }
 
 .feedback.correct {
@@ -606,9 +596,22 @@ input[type="number"] {
 /* RESPONSIVE */
 
 @media (max-width: 800px) {
+  .exam-wrapper {
+    max-width: 100%;
+    margin: 8px auto 20px;
+    padding: 0 10px;
+  }
+
   .exam-header {
     flex-direction: column;
     align-items: stretch;
+    border-radius: 0 0 16px 16px;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.12);
+    padding: 12px 14px;
+  }
+
+  .exam-header.header-collapsed {
+    padding: 8px 14px;
   }
 
   .exam-header-right {
@@ -622,19 +625,94 @@ input[type="number"] {
 
   .control-buttons {
     justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .btn {
+    padding: 7px 14px;
+    font-size: 0.9rem;
   }
 
   .exam-body {
     flex-direction: column;
+    gap: 12px;
+    margin-top: 14px;
   }
 
   .question-nav {
     width: 100%;
     position: static;
     order: -1;
+    margin-bottom: 8px;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
   }
 
-  .exam-wrapper {
-    margin-top: 12px;
+  .question-list {
+    justify-content: flex-start;
+  }
+
+  .qnav-item {
+    width: 30px;
+    height: 30px;
+    font-size: 0.85rem;
+  }
+
+  .nav-submit-btn {
+    margin-top: 10px;
+    font-size: 0.95rem;
+    padding: 9px 12px;
+  }
+
+  .question-card {
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 12px 22px rgba(15, 23, 42, 0.06);
+    scroll-margin-top: 120px;
+  }
+
+  .question-text {
+    font-size: 0.95rem;
+  }
+
+  .option-label {
+    padding: 8px 10px;
+    font-size: 0.95rem;
+  }
+
+  .feedback {
+    font-size: 0.8rem;
+  }
+
+  .header-toggle {
+    right: 12px;
+    bottom: -12px;
+  }
+}
+
+@media (max-width: 480px) {
+  html {
+    font-size: 14px;
+  }
+
+  .exam-header {
+    padding: 10px 10px;
+  }
+
+  .exam-title {
+    font-size: 1.1rem;
+  }
+
+  .timer {
+    font-size: 1.3rem;
+  }
+
+  .question-card {
+    padding: 10px 11px;
+  }
+
+  .qnav-item {
+    width: 28px;
+    height: 28px;
   }
 }
