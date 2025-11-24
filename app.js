@@ -17,6 +17,17 @@ let headerCollapsed = false;
 // HEADER COLLAPSE
 // ========================
 
+// Hàm trộn mảng (Fisher–Yates shuffle)
+function shuffleArray(arr) {
+  if (!Array.isArray(arr)) return arr;
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+
 function setHeaderCollapsed(collapse) {
   const headerEl = document.querySelector(".exam-header");
   const toggleBtn = document.getElementById("headerToggle");
@@ -104,9 +115,28 @@ function applyExamData(data, examNameLabel) {
     return;
   }
 
-  questionsData = data;
+  // 1) Clone dữ liệu để không sửa trực tiếp mảng gốc
+  const cloned = data.map((q) => ({
+    ...q,
+    // clone mảng đáp án để trộn
+    options: Array.isArray(q.options) ? [...q.options] : []
+  }));
+
+  // 2) Trộn thứ tự câu hỏi
+  shuffleArray(cloned);
+
+  // 3) Trộn thứ tự đáp án trong từng câu
+  cloned.forEach((q) => {
+    if (Array.isArray(q.options)) {
+      shuffleArray(q.options);
+    }
+  });
+
+  // 4) Gán vào biến dùng trong bài thi
+  questionsData = cloned;
   examFinished = false;
 
+  // 5) Phần còn lại giữ nguyên
   const examNameEl = document.getElementById("examName");
   if (examNameEl) {
     examNameEl.textContent = examNameLabel || "Bài thi trắc nghiệm";
@@ -128,6 +158,7 @@ function applyExamData(data, examNameLabel) {
     topResultEl.classList.remove("bad");
   }
 }
+
 
 // ========================
 // LOAD FILE TỪ MÁY
