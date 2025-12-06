@@ -1,3 +1,6 @@
+// ========================
+// BIẾN TOÀN CỤC
+// ========================
 let questionsData = [];
 let pendingData = null;
 let timerInterval = null;
@@ -117,6 +120,7 @@ function startExamNow() {
   generateQuiz();
   startTimer();
 
+  // Mobile: Thu gọn header khi bắt đầu
   if (window.innerWidth <= 850) {
     const header = document.getElementById("mainHeader");
     const toggleBtn = document.getElementById("btnToggleHeaderMobile");
@@ -336,25 +340,58 @@ async function fetchHistoryData(uid) {
   } catch(e) {}
 }
 
-// --- CHART & HISTORY LOGIC ---
+// --- [CẬP NHẬT] HÀM VẼ BIỂU ĐỒ & THỐNG KÊ CHI TIẾT ---
 function renderChart(examName, data) {
   const chartBox = document.getElementById("chartContainer");
+  const statsBox = document.getElementById("chartStats"); // [MỚI]
+  const msgBox = document.getElementById("chartMessage");
   const ctx = document.getElementById("scoreChart").getContext('2d');
+  
   let myHist = data.filter(h => h.examName === examName || h.examName.includes(examName));
   
-  // Sắp xếp tăng dần theo thời gian để vẽ đồ thị tiến bộ
-  myHist.sort((a, b) => (a.timestamp && b.timestamp) ? (a.timestamp.seconds - b.timestamp.seconds) : 0);
-
+  // Logic hiển thị thông báo nếu ít dữ liệu
   if (myHist.length < 2) { 
-    document.getElementById("chartMessage").style.display = "block";
-    document.getElementById("chartContainer").style.display = "none";
+    chartBox.style.display = "none";
+    statsBox.style.display = "none";
+    msgBox.style.display = "block";
     return; 
   }
-  document.getElementById("chartMessage").style.display = "none";
-  document.getElementById("chartContainer").style.display = "block";
+  
+  chartBox.style.display = "block";
+  statsBox.style.display = "flex"; // Hiện box thống kê
+  msgBox.style.display = "none";
 
+  // --- 1. TÍNH TOÁN SỐ LIỆU ---
+  
+  // Tìm lần làm TỐT NHẤT (Dựa trên điểm số score, nếu bằng nhau thì lấy mới hơn)
+  // Sắp xếp giảm dần theo điểm
+  const bestAttempt = [...myHist].sort((a, b) => b.score - a.score)[0];
+
+  // Tìm lần làm GẦN NHẤT (Dựa trên thời gian)
+  // Sắp xếp tăng dần theo thời gian (Cũ -> Mới) để vẽ biểu đồ
+  myHist.sort((a, b) => (a.timestamp && b.timestamp) ? (a.timestamp.seconds - b.timestamp.seconds) : 0);
+  
+  const recentAttempt = myHist[myHist.length - 1]; // Lấy phần tử cuối cùng
+
+  // --- 2. HIỂN THỊ HTML THỐNG KÊ ---
+  statsBox.innerHTML = `
+    <div class="c-stat-box">
+      <div class="c-stat-label">Lần gần nhất</div>
+      <div class="c-stat-val">${recentAttempt.score}/${recentAttempt.total} câu</div>
+      <div class="c-stat-sub">(${recentAttempt.percent}%)</div>
+    </div>
+    <div class="c-stat-box best">
+      <div class="c-stat-label">Cao nhất</div>
+      <div class="c-stat-val">${bestAttempt.score}/${bestAttempt.total} câu</div>
+      <div class="c-stat-sub">(${bestAttempt.percent}%)</div>
+    </div>
+  `;
+
+  // --- 3. VẼ BIỂU ĐỒ (Giữ nguyên logic cũ) ---
   const labels = myHist.map((_, index) => `Lần ${index + 1}`);
-  const scores = myHist.map(h => h.score);
+  const scores = myHist.map(h => h.score); 
+  const totals = myHist.map(h => h.total);
+  const percents = myHist.map(h => h.percent);
 
   if (scoreChart) { scoreChart.destroy(); }
 
@@ -363,16 +400,44 @@ function renderChart(examName, data) {
     data: {
       labels: labels,
       datasets: [{
-        label: 'Điểm (câu đúng)',
+        label: 'Số câu đúng',
         data: scores,
-        borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderWidth: 2, pointBackgroundColor: '#2563eb', pointRadius: 4, tension: 0.3, fill: true
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderWidth: 2,
+        pointBackgroundColor: '#2563eb',
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        tension: 0.3,
+        fill: true
       }]
     },
     options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, max: 100 }, x: { grid: { display: false } } }
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const idx = context.dataIndex;
+              const sc = context.parsed.y;
+              const tot = totals[idx];
+              const per = percents[idx];
+              return `Đúng: ${sc}/${tot} câu (${per}%)`; 
+            }
+          }
+        }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          grace: '1', // Thêm khoảng trống đỉnh (1 đơn vị)
+          ticks: { stepSize: 1, precision: 0 },
+          grid: { color: '#f1f5f9' }
+        },
+        x: { grid: { display: false } }
+      }
     }
   });
 }
@@ -382,13 +447,13 @@ function renderOverview(examName, data) {
   const myHist = data.filter(h => h.examName === examName || h.examName.includes(examName));
   if (myHist.length === 0) { container.style.display = "none"; return; }
   const count = myHist.length;
-  const maxScore = Math.max(...myHist.map(h => h.percent));
+  const maxScore = Math.max(...myHist.map(h => h.score));
   const avgScore = Math.round(myHist.reduce((a, b) => a + b.percent, 0) / count);
   container.style.display = "flex";
   container.innerHTML = `
     <div class="overview-item"><span class="overview-val">${count}</span><span class="overview-label">Lần làm</span></div>
     <div style="width:1px; height:30px; background:#bfdbfe;"></div>
-    <div class="overview-item"><span class="overview-val" style="color:${getMaxColor(maxScore)}">${maxScore}%</span><span class="overview-label">Cao nhất</span></div>
+    <div class="overview-item"><span class="overview-val" style="color:${getMaxColor(maxScore)}">${maxScore} câu</span><span class="overview-label">Cao nhất</span></div>
     <div style="width:1px; height:30px; background:#bfdbfe;"></div>
     <div class="overview-item"><span class="overview-val">${avgScore}%</span><span class="overview-label">Trung bình</span></div>
   `;
@@ -403,14 +468,15 @@ async function showHistory() {
   
   document.getElementById("statsList").innerHTML = "<p style='text-align:center; padding:20px'>⏳ Đang tải...</p>";
   
-  // Ẩn/Hiện Tab
+  document.getElementById("historyOverview").style.display = "none";
+  document.getElementById("chartContainer").style.display = "none";
+
+  // Reset tab active
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.tab-btn[onclick="switchHistoryTab(\'stats\')"]').classList.add('active');
   document.getElementById("tabStats").style.display = "block";
   document.getElementById("tabTimeline").style.display = "none";
   document.getElementById("tabChart").style.display = "none";
-  
-  // Reset active tab button
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector('.tab-btn[onclick="switchHistoryTab(\'stats\')"]').classList.add('active');
 
   let targetExamName = null;
   const isExamActive = document.getElementById("statusPanel").style.display !== "none";
@@ -426,15 +492,12 @@ async function showHistory() {
     document.getElementById("historyOverview").style.display = "flex";
     
     renderOverview(targetExamName, globalHistoryData);
-    renderStats(targetExamName); 
-    renderTimeline(targetExamName);
-    
-    // Chuẩn bị sẵn biểu đồ (vẽ trước nhưng ẩn)
     renderChart(targetExamName, globalHistoryData);
+    renderStats(targetExamName); 
+    renderTimeline(targetExamName); 
   } else {
     document.getElementById("historyModalTitle").textContent = "Hồ sơ học tập chung";
     document.getElementById("filterArea").style.display = "flex";
-    document.getElementById("historyOverview").style.display = "none";
     initStatsFilter(); renderStats('all'); renderTimeline('all');
   }
 }
@@ -447,7 +510,6 @@ function switchHistoryTab(tab) {
   document.getElementById('tabChart').style.display = (tab === 'chart') ? 'block' : 'none';
 }
 
-// ... (Các hàm filter, render stats giữ nguyên)
 function initStatsFilter() {
   const sel = document.getElementById("statsFilter");
   const names = new Set();
@@ -484,7 +546,6 @@ function renderStats(filterName) {
   list.innerHTML = html;
 }
 
-// [CẬP NHẬT] Render Timeline có Chi tiết xổ xuống & Mũi tên
 function renderTimeline(filterName) {
   const list = document.getElementById("timelineList");
   let data = globalHistoryData;
@@ -530,13 +591,13 @@ async function checkCurrentExamHistorySummary(examName) {
   }
 }
 
+// EVENTS
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("fileInput").onchange = loadFileFromLocal;
   document.getElementById("btnSelectDrive").onclick = chooseExamFromDriveFolder;
   document.getElementById("btnStart").onclick = startExamNow;
   document.getElementById("btnReset").onclick = resetExam;
 
-  // [SỬA] Hàm xác nhận nộp bài
   const handleSubmission = () => {
     if (!questionsData || questionsData.length === 0) return;
     const answeredCount = document.querySelectorAll('input[type="radio"]:checked').length;
@@ -544,10 +605,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const unanswer = total - answeredCount;
     let msg = "Bạn có chắc chắn muốn nộp bài không?";
     if (unanswer > 0) { msg = `Bạn còn ${unanswer} câu chưa chọn đáp án.\nBạn có chắc chắn muốn nộp bài không?`; }
-    
     if (confirm(msg)) {
       grade(false);
-      // Mobile: Thu gọn header sau khi nộp để xem điểm
       if (window.innerWidth <= 850) {
          const header = document.getElementById("mainHeader");
          const toggleBtn = document.getElementById("btnToggleHeaderMobile");
@@ -557,9 +616,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  document.getElementById("btnGradeHeader").onclick = handleSubmission; // Nút trên Header
-  document.getElementById("btnGradeNav").onclick = handleSubmission;    // Nút trong Menu Mobile
-  
+  document.getElementById("btnGradeHeader").onclick = handleSubmission;
+  document.getElementById("btnGradeNav").onclick = handleSubmission;
   document.getElementById("btnViewHistory").onclick = showHistory;
   document.getElementById("btnCloseHistory").onclick = () => document.getElementById("historyModal").style.display = "none";
   document.getElementById("btnToggleNavMobile").onclick = openQuestionNav;

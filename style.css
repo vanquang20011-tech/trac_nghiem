@@ -164,7 +164,7 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: v
 
 /* --- MOBILE OPTIMIZATION --- */
 .mobile-only { display: none; }
-.desktop-only { display: flex; }
+.desktop-only { display: none; }
 
 @media (max-width: 850px) {
   .exam-wrapper { padding: 10px; padding-top: 5px; }
@@ -223,3 +223,52 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: v
 }
 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+/* --- COPY VÀO CUỐI FILE STYLE.CSS --- */
+
+/* Hàng thống kê trong Tab Biểu đồ */
+.chart-stats-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.c-stat-box {
+  flex: 1;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+
+/* Style đặc biệt cho box "Cao nhất" */
+.c-stat-box.best {
+  background: #f0fdf4; /* Xanh lá nhạt */
+  border-color: #bbf7d0;
+}
+
+.c-stat-label {
+  font-size: 11px;
+  color: #64748b;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.c-stat-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.c-stat-sub {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+/* Màu chữ cho phần Cao nhất */
+.best .c-stat-val { color: #166534; }
+.best .c-stat-sub { color: #15803d; }
