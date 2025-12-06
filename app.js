@@ -468,8 +468,36 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btnSelectDrive").onclick = chooseExamFromDriveFolder;
   document.getElementById("btnStart").onclick = startExamNow;
   document.getElementById("btnReset").onclick = resetExam;
-  document.getElementById("btnGradeHeader").onclick = () => grade(false);
-  document.getElementById("btnGradeNav").onclick = () => grade(false); // Sự kiện cho nút nộp bài trong menu mobile
+
+  const handleSubmission = () => {
+    // Kiểm tra xem đã có đề chưa
+    if (!questionsData || questionsData.length === 0) return;
+
+    // Tính số câu chưa làm để cảnh báo kỹ hơn
+    const answeredCount = document.querySelectorAll('input[type="radio"]:checked').length;
+    const total = questionsData.length;
+    const unanswer = total - answeredCount;
+
+    let msg = "Bạn có chắc chắn muốn nộp bài không?";
+    if (unanswer > 0) {
+      msg = `Bạn còn ${unanswer} câu chưa chọn đáp án.\nBạn có chắc chắn muốn nộp bài không?`;
+    }
+
+    if (confirm(msg)) {
+      grade(false); // Nếu chọn OK thì mới chấm điểm
+      
+      // Tự động thu gọn header trên mobile sau khi nộp để xem kết quả rõ hơn
+      if (window.innerWidth <= 850) {
+         const header = document.getElementById("mainHeader");
+         const toggleBtn = document.getElementById("btnToggleHeaderMobile");
+         header.classList.add("header-hidden");
+         toggleBtn.textContent = "▼";
+      }
+    }
+  };
+
+  document.getElementById("btnGradeHeader").onclick = handleSubmission;
+  document.getElementById("btnGradeNav").onclick = handleSubmission; // Sự kiện cho nút nộp bài trong menu mobile
   document.getElementById("btnViewHistory").onclick = showHistory;
   document.getElementById("btnCloseHistory").onclick = () => document.getElementById("historyModal").style.display = "none";
   document.getElementById("btnToggleNavMobile").onclick = openQuestionNav;

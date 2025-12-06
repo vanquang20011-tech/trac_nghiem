@@ -214,28 +214,49 @@ body {
 
 /* --- [MỚI] STYLE CHO NÚT THU GỌN HEADER --- */
 .header-toggle-btn {
-  display: none; /* Ẩn trên desktop */
-  position: absolute;
-  bottom: -16px; /* Treo lơ lửng dưới header */
-  left: 50%;
-  transform: translateX(-50%);
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-top: none;
-  border-radius: 0 0 12px 12px;
-  width: 44px;
-  height: 24px;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  color: #64748b;
-  cursor: pointer;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-  z-index: 95;
-  transition: background 0.2s;
-}
+    display: none; /* Mặc định ẩn trên PC */
+    
+    /* Vị trí: Treo thấp hẳn xuống dưới header */
+    position: absolute;
+    bottom: -32px; /* Tăng chiều sâu treo xuống */
+    left: 50%;
+    transform: translateX(-50%); /* Căn giữa */
+    
+    /* Kích thước: To và Rộng hơn nhiều */
+    width: 120px; /* Rộng gấp đôi cũ để dễ bấm trúng */
+    height: 32px; /* Cao hơn để ngón tay chạm thoải mái */
+    
+    /* Giao diện: Hình dáng Tab bo tròn */
+    background: #ffffff;
+    border: 1px solid #cbd5e1; /* Viền đậm hơn chút cho dễ thấy */
+    border-top: none; /* Liền mạch với header */
+    border-radius: 0 0 16px 16px; /* Bo góc mềm mại hơn */
+    
+    /* Icon & Màu sắc */
+    color: #475569;
+    font-size: 16px; /* Mũi tên to rõ ràng */
+    font-weight: bold;
+    
+    /* Bố cục icon */
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    
+    /* Hiệu ứng bóng đổ nổi bật tách biệt khỏi nội dung dưới */
+    box-shadow: 0 4px 10px -2px rgba(0,0,0,0.15); 
+    z-index: 95;
+    
+    /* Hiệu ứng chạm */
+    transition: all 0.2s;
+    pointer-events: auto;
+  }
 
-.header-toggle-btn:active { background: #f1f5f9; }
+  /* Khi chạm vào nút */
+  .header-toggle-btn:active {
+    background: #f1f5f9;
+    bottom: -30px; /* Thụt lên 1 chút tạo cảm giác nhấn */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
 
 /* --- MOBILE OPTIMIZATION --- */
 .mobile-only { display: none; }
@@ -259,6 +280,7 @@ body {
   .exam-header.header-hidden {
     transform: translateY(-100%); /* Trượt hẳn lên trên khuất tầm nhìn */
     box-shadow: none; /* Bỏ bóng khi ẩn */
+    pointer-events: none;
   }
   
   /* Khi header ẩn, nút toggle vẫn phải hiện ra để kéo xuống */
@@ -390,3 +412,127 @@ body {
 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+/* --- TÌM VÀ THAY THẾ ĐOẠN @MEDIA Ở CUỐI FILE STYLE.CSS BẰNG ĐOẠN NÀY --- */
+
+@media (max-width: 850px) {
+  .exam-wrapper { 
+    padding: 10px; 
+    padding-top: 5px; 
+  }
+
+  /* --- 1. HEADER LAYOUT TỔNG QUÁT --- */
+  .exam-header { 
+    flex-direction: column; 
+    align-items: stretch;
+    padding: 10px 12px; 
+    gap: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 90;
+  }
+
+  /* Ẩn Logo để tiết kiệm chỗ */
+  .header-brand { display: none; } 
+
+  /* --- [FIX QUAN TRỌNG] HIỆN LẠI NÚT LOGIN & LỊCH SỬ --- */
+  .header-right { 
+    display: flex !important; /* Bắt buộc hiện */
+    width: 100%;
+    justify-content: space-between; /* Căn đều 2 bên */
+    align-items: center;
+    order: 1; /* Đưa lên đầu danh sách */
+    margin-bottom: 5px;
+  }
+
+  /* --- LOGIC ẨN THÔNG MINH --- */
+  /* Khi Status Panel (Đồng hồ) hiện -> Ẩn Login/History đi cho gọn màn hình */
+  .exam-header:has(.status-panel[style*="flex"]) .header-right {
+    display: none !important;
+  }
+
+  /* --- 2. SETUP PANEL (LÚC CHỌN FILE) --- */
+  .setup-panel { 
+    flex-direction: column; 
+    width: 100%; 
+    padding: 10px; 
+    gap: 10px; 
+    order: 2;
+  }
+  .file-select-group { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .btn-upload, .btn-icon-drive { justify-content: center; width: 100%; }
+  .action-group { width: 100%; display: flex; gap: 8px; }
+  .time-wrapper { flex: 1; }
+  .btn-start { flex: 1.5; }
+
+  /* --- 3. STATUS PANEL (HEADER LÚC ĐANG THI) --- */
+  .header-center { width: 100%; order: 3; }
+
+  .status-panel { 
+    margin-top: 0; 
+    width: 100%; 
+    height: 54px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: space-between; 
+    background: #f8fafc;
+    padding: 0 8px;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+  }
+
+  /* Đồng hồ */
+  .status-info { 
+    display: flex; align-items: center; gap: 8px; height: 100%;
+  }
+  .exam-name-display { display: none; } 
+  .timer-display { 
+    font-size: 20px; font-weight: 800; color: #0f172a; line-height: 1; margin-top: 2px;
+  }
+
+  /* Các nút bấm (Nộp bài, Làm lại...) */
+  .status-actions { 
+    display: flex !important; 
+    align-items: center;
+    gap: 8px; 
+    height: 100%;
+  }
+
+  .btn-finish { 
+    padding: 0 12px; height: 36px; font-size: 13px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  
+  .btn-outline { 
+    padding: 0 10px; height: 36px; font-size: 13px; border-radius: 8px;
+    border: 1px solid #cbd5e1; background: white;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Nút Menu Mobile (Xanh đen đậm) */
+  .mobile-only { display: flex; }
+  
+  #btnToggleNavMobileInHeader {
+    width: 36px; height: 36px;
+    background-color: #1e293b; color: #ffffff; 
+    border: 1px solid #0f172a; border-radius: 8px;
+    font-size: 18px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    transition: all 0.2s;
+  }
+  #btnToggleNavMobileInHeader:active {
+    background-color: #0f172a; transform: translateY(1px);
+  }
+
+  /* --- 4. BẢNG CÂU HỎI & CÁC THÀNH PHẦN KHÁC --- */
+  .question-nav-overlay {
+    display: none; position: fixed; inset: 0; top: 0; height: 100%;
+    background: rgba(0,0,0,0.5); z-index: 1000; align-items: flex-end; 
+  }
+  .question-nav-overlay.open { display: flex; }
+  .question-nav { width: 100%; max-height: 60vh; border-radius: 20px 20px 0 0; padding-bottom: 30px; animation: slideUp 0.3s; }
+  
+  .header-toggle-btn { display: flex; }
+}
+
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
