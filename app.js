@@ -1,9 +1,3 @@
-// ... (Các biến toàn cục giữ nguyên) ...
-// Copy toàn bộ code cũ, chỉ thay đổi phần cuối cùng của file (phần Events)
-
-// ========================
-// BIẾN TOÀN CỤC
-// ========================
 let questionsData = [];
 let pendingData = null;
 let timerInterval = null;
@@ -11,13 +5,10 @@ let remainingSeconds = 0;
 let examFinished = false;
 let examTotalSeconds = 0;
 let globalHistoryData = [];
+let scoreChart = null; // Biến giữ biểu đồ
 
 const API_KEY = "AIzaSyAry4xCdznJGeWvTi1NtId0q6YgPfZdwrg";
 const DRIVE_FOLDER_ID = ""; 
-
-// ... (Giữ nguyên các hàm utils, setHeaderMode, updateFileStatus, formatTime...)
-// Bạn hãy copy các hàm từ code cũ vào đây, chúng không thay đổi
-// Chỉ cần thay đổi hàm startExamNow và phần DOMContentLoaded bên dưới
 
 function setHeaderMode(mode) {
   const setup = document.getElementById("setupPanel");
@@ -87,7 +78,6 @@ function shuffleArray(arr) {
   return arr;
 }
 
-// 1. Hàm gọi khi File đã tải xong
 async function handleDataLoaded(data, fileName) {
   if (!Array.isArray(data) || data.length === 0) {
     alert("File không hợp lệ hoặc không có câu hỏi.");
@@ -106,7 +96,6 @@ async function handleDataLoaded(data, fileName) {
   await checkCurrentExamHistorySummary(fileName);
 }
 
-// 2. Hàm gọi khi bấm nút "Bắt đầu ngay" -> CÓ SỬA ĐỔI
 function startExamNow() {
   if(!pendingData) {
     alert("Vui lòng chọn file đề trước!");
@@ -128,11 +117,10 @@ function startExamNow() {
   generateQuiz();
   startTimer();
 
-  // [THÊM MỚI] Tự động thu gọn header trên mobile khi bắt đầu
   if (window.innerWidth <= 850) {
     const header = document.getElementById("mainHeader");
     const toggleBtn = document.getElementById("btnToggleHeaderMobile");
-    header.classList.add("mobile-collapsed");
+    header.classList.add("header-hidden");
     toggleBtn.textContent = "▼";
   }
 
@@ -140,9 +128,6 @@ function startExamNow() {
   document.getElementById("topResult").style.display = "none";
   checkCurrentExamHistorySummary(pendingData.name);
 }
-
-// ... (Các hàm loadFile, loadJsonDrive, grade, resetExam, history... giữ nguyên như cũ)
-// Bạn copy phần thân các hàm này từ file cũ vào đây.
 
 function loadFileFromLocal() {
   const fileInput = document.getElementById("fileInput");
@@ -310,7 +295,7 @@ function resetExam() {
   closeQuestionNav();
 }
 
-// ... (Phần Firebase và History giữ nguyên từ file cũ)
+// --- FIREBASE ---
 auth.onAuthStateChanged((user) => {
   const btnLogin = document.getElementById("btnLogin");
   const userSection = document.getElementById("userSection");
@@ -326,6 +311,7 @@ auth.onAuthStateChanged((user) => {
 });
 document.getElementById("btnLogin").onclick = () => auth.signInWithPopup(provider);
 document.getElementById("btnLogout").onclick = () => auth.signOut();
+
 async function saveExamResult(score, total, percent, examName) {
   const user = auth.currentUser;
   if(!user) return;
@@ -349,6 +335,48 @@ async function fetchHistoryData(uid) {
     snap.forEach(d => globalHistoryData.push({ id: d.id, ...d.data() }));
   } catch(e) {}
 }
+
+// --- CHART & HISTORY LOGIC ---
+function renderChart(examName, data) {
+  const chartBox = document.getElementById("chartContainer");
+  const ctx = document.getElementById("scoreChart").getContext('2d');
+  let myHist = data.filter(h => h.examName === examName || h.examName.includes(examName));
+  
+  // Sắp xếp tăng dần theo thời gian để vẽ đồ thị tiến bộ
+  myHist.sort((a, b) => (a.timestamp && b.timestamp) ? (a.timestamp.seconds - b.timestamp.seconds) : 0);
+
+  if (myHist.length < 2) { 
+    document.getElementById("chartMessage").style.display = "block";
+    document.getElementById("chartContainer").style.display = "none";
+    return; 
+  }
+  document.getElementById("chartMessage").style.display = "none";
+  document.getElementById("chartContainer").style.display = "block";
+
+  const labels = myHist.map((_, index) => `Lần ${index + 1}`);
+  const scores = myHist.map(h => h.score);
+
+  if (scoreChart) { scoreChart.destroy(); }
+
+  scoreChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Điểm (câu đúng)',
+        data: scores,
+        borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderWidth: 2, pointBackgroundColor: '#2563eb', pointRadius: 4, tension: 0.3, fill: true
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, max: 100 }, x: { grid: { display: false } } }
+    }
+  });
+}
+
 function renderOverview(examName, data) {
   const container = document.getElementById("historyOverview");
   const myHist = data.filter(h => h.examName === examName || h.examName.includes(examName));
@@ -365,42 +393,61 @@ function renderOverview(examName, data) {
     <div class="overview-item"><span class="overview-val">${avgScore}%</span><span class="overview-label">Trung bình</span></div>
   `;
 }
-function getMaxColor(p) {
-  if(p >= 90) return '#16a34a'; 
-  if(p >= 50) return '#d97706'; 
-  return '#dc2626'; 
-}
+function getMaxColor(p) { return p >= 90 ? '#16a34a' : (p >= 50 ? '#d97706' : '#dc2626'); }
+
 async function showHistory() {
   const user = auth.currentUser;
   if (!user) { alert("Vui lòng đăng nhập."); return; }
   const modal = document.getElementById("historyModal");
   modal.style.display = "flex";
+  
   document.getElementById("statsList").innerHTML = "<p style='text-align:center; padding:20px'>⏳ Đang tải...</p>";
-  document.getElementById("historyOverview").style.display = "none";
+  
+  // Ẩn/Hiện Tab
+  document.getElementById("tabStats").style.display = "block";
+  document.getElementById("tabTimeline").style.display = "none";
+  document.getElementById("tabChart").style.display = "none";
+  
+  // Reset active tab button
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.tab-btn[onclick="switchHistoryTab(\'stats\')"]').classList.add('active');
+
   let targetExamName = null;
   const isExamActive = document.getElementById("statusPanel").style.display !== "none";
   if (isExamActive) { targetExamName = document.getElementById("examName").textContent; } 
   else if (pendingData) { targetExamName = pendingData.name; }
+  
   if(globalHistoryData.length === 0) await fetchHistoryData(user.uid);
+  
   if (targetExamName) {
     document.getElementById("filterArea").style.display = "none";
     document.getElementById("currentExamLabel").style.display = "none";
     document.getElementById("historyModalTitle").textContent = targetExamName;
+    document.getElementById("historyOverview").style.display = "flex";
+    
     renderOverview(targetExamName, globalHistoryData);
-    renderStats(targetExamName); renderTimeline(targetExamName); switchHistoryTab('stats');
+    renderStats(targetExamName); 
+    renderTimeline(targetExamName);
+    
+    // Chuẩn bị sẵn biểu đồ (vẽ trước nhưng ẩn)
+    renderChart(targetExamName, globalHistoryData);
   } else {
     document.getElementById("historyModalTitle").textContent = "Hồ sơ học tập chung";
     document.getElementById("filterArea").style.display = "flex";
     document.getElementById("historyOverview").style.display = "none";
-    initStatsFilter(); renderStats('all'); renderTimeline('all'); switchHistoryTab('timeline');
+    initStatsFilter(); renderStats('all'); renderTimeline('all');
   }
 }
+
 function switchHistoryTab(tab) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.querySelector(`.tab-btn[onclick="switchHistoryTab('${tab}')"]`).classList.add('active');
   document.getElementById('tabStats').style.display = (tab === 'stats') ? 'block' : 'none';
   document.getElementById('tabTimeline').style.display = (tab === 'timeline') ? 'block' : 'none';
+  document.getElementById('tabChart').style.display = (tab === 'chart') ? 'block' : 'none';
 }
+
+// ... (Các hàm filter, render stats giữ nguyên)
 function initStatsFilter() {
   const sel = document.getElementById("statsFilter");
   const names = new Set();
@@ -436,81 +483,35 @@ function renderStats(filterName) {
   });
   list.innerHTML = html;
 }
-// --- TÌM VÀ THAY THẾ HÀM renderTimeline BẰNG ĐOẠN NÀY ---
 
+// [CẬP NHẬT] Render Timeline có Chi tiết xổ xuống & Mũi tên
 function renderTimeline(filterName) {
   const list = document.getElementById("timelineList");
   let data = globalHistoryData;
-  
-  // Lọc dữ liệu theo tên đề
-  if(filterName !== 'all') {
-    data = data.filter(i => i.examName === filterName || i.examName.includes(filterName));
-  }
-
-  if(!data.length) { 
-    list.innerHTML = "<p style='text-align:center; padding:20px; color:#64748b;'>Chưa có lịch sử làm bài nào.</p>"; 
-    return; 
-  }
-
+  if(filterName !== 'all') { data = data.filter(i => i.examName === filterName || i.examName.includes(filterName)); }
+  if(!data.length) { list.innerHTML = "<p style='text-align:center; padding:20px; color:#64748b;'>Chưa có lịch sử làm bài nào.</p>"; return; }
   let html = "";
-  
   data.forEach(d => {
-    // Tạo màu cho điểm số
-    let scoreColor = '#16a34a'; // Xanh lá
-    if (d.percent < 50) scoreColor = '#dc2626'; // Đỏ
-    else if (d.percent < 80) scoreColor = '#d97706'; // Cam
-
-    // Tạo HTML chi tiết từng câu (Mặc định ẩn)
+    let scoreColor = '#16a34a'; if (d.percent < 50) scoreColor = '#dc2626'; else if (d.percent < 80) scoreColor = '#d97706';
     let detailsHtml = '';
     if (d.details && Array.isArray(d.details)) {
       detailsHtml = d.details.map((q, idx) => {
-        // q.s là trạng thái đúng/sai (true/false)
-        const statusClass = q.s ? 'hist-correct' : 'hist-wrong';
-        const icon = q.s ? '✅' : '❌';
-        
-        return `
-          <div class="hist-q-item ${statusClass}">
-            <div class="hist-q-text"><strong>Câu ${idx + 1}:</strong> ${q.q}</div>
-            <div class="hist-user-ans">
-              ${icon} Bạn chọn: <b>${q.u || '(Bỏ trống)'}</b>
-            </div>
-            ${!q.s ? `<div class="hist-correct-ans">👉 Đáp án đúng: <b>${q.a}</b></div>` : ''}
-          </div>
-        `;
+        const isRight = q.s;
+        return `<div class="hist-q-item ${isRight ? 'hist-correct' : 'hist-wrong'}"><div class="hist-q-text"><span style="font-weight:bold; color:${isRight?'#16a34a':'#dc2626'}">Câu ${idx + 1}:</span> ${q.q}</div><div class="hist-user-ans">${isRight ? '✅' : '❌'} Bạn chọn: <b>${q.u || '(Bỏ trống)'}</b></div>${!isRight ? `<div class="hist-correct-ans">👉 Đáp án đúng: <b>${q.a}</b></div>` : ''}</div>`;
       }).join('');
     }
-
-    // HTML thẻ tóm tắt (Click vào đây để mở chi tiết)
-    html += `
-      <div class="history-card-wrapper">
-        <div class="history-summary" onclick="toggleHistoryDetail('${d.id}')">
-          <div class="hist-left">
-            <div class="hist-name">${d.examName}</div>
-            <div class="hist-date">${d.dateStr}</div>
-          </div>
-          <div class="hist-right">
-            <span class="hist-score" style="color:${scoreColor}">${d.score}/${d.total}</span>
-            <span class="hist-percent" style="background:${scoreColor}">${d.percent}%</span>
-          </div>
-        </div>
-        
-        <div id="detail-${d.id}" class="history-details-box" style="display:none;">
-          ${detailsHtml || '<p style="padding:10px;">Không có chi tiết.</p>'}
-        </div>
-      </div>
-    `;
+    html += `<div class="history-card-wrapper" id="card-${d.id}"><div class="history-summary" onclick="toggleHistoryDetail('${d.id}')"><div class="hist-left"><div class="hist-name">${d.examName}</div><div class="hist-date">${d.dateStr}</div></div><div class="hist-right"><div style="text-align:right; margin-right:8px;"><div class="hist-score" style="color:${scoreColor}">${d.score}/${d.total}</div><div class="hist-percent" style="background:${scoreColor}">${d.percent}%</div></div><div class="hist-arrow">▼</div></div></div><div id="detail-${d.id}" class="history-details-box" style="display:none;">${detailsHtml || '<p style="padding:10px; text-align:center;">Không có dữ liệu chi tiết.</p>'}</div></div>`;
   });
-  
   list.innerHTML = html;
 }
-
-// [THÊM MỚI] Hàm để đóng mở chi tiết lịch sử
 window.toggleHistoryDetail = function(id) {
-  const el = document.getElementById(`detail-${id}`);
-  if (el.style.display === "none") {
-    el.style.display = "block";
+  const detailEl = document.getElementById(`detail-${id}`);
+  const cardEl = document.getElementById(`card-${id}`);
+  const arrowEl = cardEl.querySelector('.hist-arrow');
+  if (detailEl.style.display === "none") {
+    detailEl.style.display = "block"; cardEl.classList.add("active"); if(arrowEl) arrowEl.style.transform = "rotate(180deg)";
   } else {
-    el.style.display = "none";
+    detailEl.style.display = "none"; cardEl.classList.remove("active"); if(arrowEl) arrowEl.style.transform = "rotate(0deg)";
   }
 };
 
@@ -529,31 +530,24 @@ async function checkCurrentExamHistorySummary(examName) {
   }
 }
 
-// EVENTS
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("fileInput").onchange = loadFileFromLocal;
   document.getElementById("btnSelectDrive").onclick = chooseExamFromDriveFolder;
   document.getElementById("btnStart").onclick = startExamNow;
   document.getElementById("btnReset").onclick = resetExam;
 
+  // [SỬA] Hàm xác nhận nộp bài
   const handleSubmission = () => {
-    // Kiểm tra xem đã có đề chưa
     if (!questionsData || questionsData.length === 0) return;
-
-    // Tính số câu chưa làm để cảnh báo kỹ hơn
     const answeredCount = document.querySelectorAll('input[type="radio"]:checked').length;
     const total = questionsData.length;
     const unanswer = total - answeredCount;
-
     let msg = "Bạn có chắc chắn muốn nộp bài không?";
-    if (unanswer > 0) {
-      msg = `Bạn còn ${unanswer} câu chưa chọn đáp án.\nBạn có chắc chắn muốn nộp bài không?`;
-    }
-
+    if (unanswer > 0) { msg = `Bạn còn ${unanswer} câu chưa chọn đáp án.\nBạn có chắc chắn muốn nộp bài không?`; }
+    
     if (confirm(msg)) {
-      grade(false); // Nếu chọn OK thì mới chấm điểm
-      
-      // Tự động thu gọn header trên mobile sau khi nộp để xem kết quả rõ hơn
+      grade(false);
+      // Mobile: Thu gọn header sau khi nộp để xem điểm
       if (window.innerWidth <= 850) {
          const header = document.getElementById("mainHeader");
          const toggleBtn = document.getElementById("btnToggleHeaderMobile");
@@ -563,40 +557,29 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  document.getElementById("btnGradeHeader").onclick = handleSubmission;
-  document.getElementById("btnGradeNav").onclick = handleSubmission; // Sự kiện cho nút nộp bài trong menu mobile
+  document.getElementById("btnGradeHeader").onclick = handleSubmission; // Nút trên Header
+  document.getElementById("btnGradeNav").onclick = handleSubmission;    // Nút trong Menu Mobile
+  
   document.getElementById("btnViewHistory").onclick = showHistory;
   document.getElementById("btnCloseHistory").onclick = () => document.getElementById("historyModal").style.display = "none";
   document.getElementById("btnToggleNavMobile").onclick = openQuestionNav;
   document.getElementById("questionNavCloseBtn").onclick = closeQuestionNav;
   document.getElementById("questionNavOverlay").onclick = (e) => { if(e.target.id === "questionNavOverlay") closeQuestionNav(); };
-  // Thêm vào app.js trong phần Events
   document.getElementById("btnToggleNavMobileInHeader").onclick = openQuestionNav;  
-  // Logic nút thu gọn Header Mobile
+  
   const header = document.getElementById("mainHeader");
   const toggleBtn = document.getElementById("btnToggleHeaderMobile");
-  
   toggleBtn.onclick = () => {
     header.classList.toggle("header-hidden");
-    
-    // Đổi icon mũi tên
     if (header.classList.contains("header-hidden")) {
-      toggleBtn.textContent = "▼"; // Mũi tên chỉ xuống (Bấm để hiện Header)
-      toggleBtn.title = "Hiện thanh công cụ";
+      toggleBtn.textContent = "▼"; toggleBtn.title = "Hiện thanh công cụ";
     } else {
-      toggleBtn.textContent = "▲"; // Mũi tên chỉ lên (Bấm để ẩn Header)
-      toggleBtn.title = "Ẩn thanh công cụ";
+      toggleBtn.textContent = "▲"; toggleBtn.title = "Ẩn thanh công cụ";
     }
   };
-
-  // Tự động ẩn Header khi mở menu câu hỏi (để màn hình thoáng)
   document.getElementById("btnToggleNavMobile").onclick = () => {
     openQuestionNav();
-    if (window.innerWidth <= 850) {
-       header.classList.add("header-hidden");
-       toggleBtn.textContent = "▼";
-    }
+    if (window.innerWidth <= 850) { header.classList.add("header-hidden"); toggleBtn.textContent = "▼"; }
   };
-  
   updateFileStatus("", false); 
 });

@@ -2,9 +2,11 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Thi Trắc Nghiệm Online</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+  <title>Thi Trắc Nghiệm Online</title>
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -42,17 +44,17 @@
       </div>
 
       <div id="statusPanel" class="status-panel" style="display:none;">
-  <div class="status-info">
-    <div id="examName" class="exam-name-display">Đang tải...</div>
-    <div style="font-size:20px;">⏱️</div> 
-    <div id="timer" class="timer-display">--:--</div>
-  </div>
-  
-  <div class="status-actions">
-    <button id="btnGradeHeader" class="btn-finish">Nộp bài</button>
-    <button id="btnReset" class="btn-outline">↺</button> <button id="btnToggleNavMobileInHeader" class="mobile-only">📋</button>
-  </div>
-</div>
+        <div class="status-info">
+          <div id="examName" class="exam-name-display">Đang tải...</div>
+          <div style="font-size:20px;">⏱️</div> 
+          <div id="timer" class="timer-display">--:--</div>
+        </div>
+        <div class="status-actions">
+          <button id="btnGradeHeader" class="btn-finish">Nộp bài</button>
+          <button id="btnReset" class="btn-outline">↺</button>
+          <button id="btnToggleNavMobileInHeader" class="mobile-only">📋</button>
+        </div>
+      </div>
     </div>
 
     <div class="header-right">
@@ -65,7 +67,7 @@
           <button id="btnLogout" class="btn-logout">Exit</button>
         </div>
       </div>
-      <button id="btnToggleNavMobile" class="btn-tool mobile-only">📋</button>
+      <button id="btnToggleNavMobile" class="btn-tool desktop-only">📋</button>
     </div>
 
     <button id="btnToggleHeaderMobile" class="header-toggle-btn mobile-only">▲</button>
@@ -90,9 +92,7 @@
           <span class="qnav-title" style="font-size:16px;">Danh sách câu hỏi</span>
           <button id="questionNavCloseBtn" class="close-btn" style="border:none; background:#f1f5f9; width:32px; height:32px; border-radius:50%; font-weight:bold; color:#64748b; font-size:16px;">✕</button>
         </div>
-        
         <div id="questionList" class="question-list"></div>
-
         <button id="btnGradeNav" class="nav-submit" style="width:100%; margin-top:20px; padding:12px; background:#ef4444; color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
           Nộp bài ngay
         </button>
@@ -113,13 +113,14 @@
       <button id="btnCloseHistory" style="border:none; background:none; font-size:20px; cursor:pointer;">✕</button>
     </div>
 
-    <div id="historyOverview" class="history-overview" style="display:none;">
-      </div>
+    <div id="historyOverview" class="history-overview" style="display:none;"></div>
 
     <div class="history-tabs">
       <button class="tab-btn active" onclick="switchHistoryTab('stats')">⚠️ Câu hay sai</button>
-      <button class="tab-btn" onclick="switchHistoryTab('timeline')">📜 Lịch sử chi tiết</button>
+      <button class="tab-btn" onclick="switchHistoryTab('timeline')">📜 Lịch sử</button>
+      <button class="tab-btn" onclick="switchHistoryTab('chart')">📈 Biểu đồ</button>
     </div>
+
     <div class="modal-body">
       <div id="tabStats" class="tab-content active">
         <div id="filterArea" class="stats-filter-wrapper" style="padding:10px 0;">
@@ -131,8 +132,18 @@
         <div id="currentExamLabel" class="exam-focus-label" style="display:none;"></div>
         <div id="statsList"></div>
       </div>
+
       <div id="tabTimeline" class="tab-content" style="display:none;">
         <div id="timelineList"></div>
+      </div>
+
+      <div id="tabChart" class="tab-content" style="display:none;">
+        <div id="chartContainer" class="chart-container">
+          <canvas id="scoreChart"></canvas>
+        </div>
+        <div id="chartMessage" style="text-align:center; padding:20px; color:#64748b; display:none;">
+          Chưa đủ dữ liệu để vẽ biểu đồ (Cần ít nhất 2 lần thi).
+        </div>
       </div>
     </div>
   </div>
