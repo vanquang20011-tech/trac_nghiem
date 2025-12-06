@@ -536,3 +536,70 @@ body {
 }
 
 @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+/* --- COPY VÀO CUỐI FILE STYLE.CSS --- */
+
+/* Style cho thẻ bao quanh mỗi lần làm */
+.history-card-wrapper {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+/* Phần tóm tắt (luôn hiện) */
+.history-summary {
+  padding: 12px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  background: #fff;
+}
+.history-summary:hover {
+  background: #f8fafc;
+}
+
+.hist-name { font-weight: 600; color: #1e293b; font-size: 14px; margin-bottom: 4px; }
+.hist-date { font-size: 12px; color: #94a3b8; }
+.hist-right { display: flex; align-items: center; gap: 10px; }
+.hist-score { font-weight: 700; font-size: 14px; }
+.hist-percent { 
+  color: white; padding: 2px 8px; border-radius: 6px; 
+  font-size: 12px; font-weight: 600; min-width: 40px; text-align: center;
+}
+
+/* Phần chi tiết (xổ xuống) */
+.history-details-box {
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+  padding: 10px;
+  max-height: 400px;
+  overflow-y: auto; /* Cuộn nếu dài quá */
+}
+
+/* Từng câu hỏi trong lịch sử */
+.hist-q-item {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+/* Màu sắc đúng sai */
+.hist-q-item.hist-correct {
+  border-left: 4px solid #16a34a;
+  background: #f0fdf4;
+}
+.hist-q-item.hist-wrong {
+  border-left: 4px solid #dc2626;
+  background: #fef2f2;
+}
+
+.hist-q-text { margin-bottom: 6px; color: #334155; line-height: 1.4; }
+.hist-user-ans { margin-bottom: 2px; }
+.hist-correct-ans { color: #16a34a; margin-top: 2px; }

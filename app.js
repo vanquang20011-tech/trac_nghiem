@@ -436,17 +436,84 @@ function renderStats(filterName) {
   });
   list.innerHTML = html;
 }
+// --- TÌM VÀ THAY THẾ HÀM renderTimeline BẰNG ĐOẠN NÀY ---
+
 function renderTimeline(filterName) {
   const list = document.getElementById("timelineList");
   let data = globalHistoryData;
-  if(filterName !== 'all') data = data.filter(i => i.examName === filterName || i.examName.includes(filterName));
-  if(!data.length) { list.innerHTML = "<p style='text-align:center;'>Trống</p>"; return; }
+  
+  // Lọc dữ liệu theo tên đề
+  if(filterName !== 'all') {
+    data = data.filter(i => i.examName === filterName || i.examName.includes(filterName));
+  }
+
+  if(!data.length) { 
+    list.innerHTML = "<p style='text-align:center; padding:20px; color:#64748b;'>Chưa có lịch sử làm bài nào.</p>"; 
+    return; 
+  }
+
   let html = "";
+  
   data.forEach(d => {
-    html += `<div style="padding:12px; border:1px solid #eee; margin-bottom:8px; border-radius:8px; background:white;"><div style="display:flex; justify-content:space-between; font-size:12px; color:#888;"><span>${d.dateStr}</span> <span>${d.score}/${d.total}</span></div><div style="font-weight:600; font-size:14px; color:#333;">${d.examName} (${d.percent}%)</div></div>`;
+    // Tạo màu cho điểm số
+    let scoreColor = '#16a34a'; // Xanh lá
+    if (d.percent < 50) scoreColor = '#dc2626'; // Đỏ
+    else if (d.percent < 80) scoreColor = '#d97706'; // Cam
+
+    // Tạo HTML chi tiết từng câu (Mặc định ẩn)
+    let detailsHtml = '';
+    if (d.details && Array.isArray(d.details)) {
+      detailsHtml = d.details.map((q, idx) => {
+        // q.s là trạng thái đúng/sai (true/false)
+        const statusClass = q.s ? 'hist-correct' : 'hist-wrong';
+        const icon = q.s ? '✅' : '❌';
+        
+        return `
+          <div class="hist-q-item ${statusClass}">
+            <div class="hist-q-text"><strong>Câu ${idx + 1}:</strong> ${q.q}</div>
+            <div class="hist-user-ans">
+              ${icon} Bạn chọn: <b>${q.u || '(Bỏ trống)'}</b>
+            </div>
+            ${!q.s ? `<div class="hist-correct-ans">👉 Đáp án đúng: <b>${q.a}</b></div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    // HTML thẻ tóm tắt (Click vào đây để mở chi tiết)
+    html += `
+      <div class="history-card-wrapper">
+        <div class="history-summary" onclick="toggleHistoryDetail('${d.id}')">
+          <div class="hist-left">
+            <div class="hist-name">${d.examName}</div>
+            <div class="hist-date">${d.dateStr}</div>
+          </div>
+          <div class="hist-right">
+            <span class="hist-score" style="color:${scoreColor}">${d.score}/${d.total}</span>
+            <span class="hist-percent" style="background:${scoreColor}">${d.percent}%</span>
+          </div>
+        </div>
+        
+        <div id="detail-${d.id}" class="history-details-box" style="display:none;">
+          ${detailsHtml || '<p style="padding:10px;">Không có chi tiết.</p>'}
+        </div>
+      </div>
+    `;
   });
+  
   list.innerHTML = html;
 }
+
+// [THÊM MỚI] Hàm để đóng mở chi tiết lịch sử
+window.toggleHistoryDetail = function(id) {
+  const el = document.getElementById(`detail-${id}`);
+  if (el.style.display === "none") {
+    el.style.display = "block";
+  } else {
+    el.style.display = "none";
+  }
+};
+
 async function checkCurrentExamHistorySummary(examName) {
   const user = auth.currentUser;
   const summaryEl = document.getElementById("examHistorySummary");
