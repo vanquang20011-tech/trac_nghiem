@@ -2,127 +2,162 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <title>Bài thi trắc nghiệm</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>Thi Trắc Nghiệm Online</title>
   <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+
 <div class="exam-wrapper">
-
-  <header  class="exam-header">
-    <div class="exam-header-left">
-      <h1 class="exam-title">Bài thi trắc nghiệm</h1>
-      <p class="exam-subtitle">
-        Chọn file câu hỏi, nhập thời gian &amp; bắt đầu làm bài.
-      </p>
-
-      <!-- Tên bài thi -->
-      <p id="examName" class="exam-name" style="display:none;"></p>
-
-      <!-- Kết quả nổi bật -->
-      <div id="topResult" class="top-result" style="display:none;"></div>
-
-      <div class="controls">
-        <div class="control-group">
-          <label for="fileInput" class="control-label">File câu hỏi (.json)</label>
-          <input type="file" id="fileInput" accept=".json">
-        </div>
-
-        <div class="control-group">
-          <label for="timeInput" class="control-label">Thời gian (phút)</label>
-          <input type="number" id="timeInput" min="1" max="180" value="15">
-        </div>
-
-        <div class="control-buttons">
-          <button class="btn btn-primary" id="btnStart">
-            📂 Tạo đề &amp; bắt đầu thi
-          </button>
-          <button class="btn btn-secondary" id="btnSelectDrive">
-            ☁ Chọn đề từ Google Drive
-          </button>
-          <button class="btn btn-secondary" id="btnReset">
-            🔄 Làm lại
-          </button>
-        </div>
+  <header class="exam-header" id="mainHeader">
+    <div class="header-brand">
+      <div class="brand-icon">📝</div>
+      <div class="brand-text">
+        <h1>Trắc Nghiệm</h1>
+        <p>Master Your Knowledge</p>
       </div>
     </div>
 
-    <div class="exam-header-right">
-      <div class="timer-label">Thời gian còn lại</div>
-      <div id="timer" class="timer timer-idle">--:--</div>
-      <p class="timer-note"></p>
+    <div class="header-center">
+      <div id="setupPanel" class="setup-panel">
+        <div class="file-select-group">
+          <label class="btn-upload">
+            <input type="file" id="fileInput" accept=".json">
+            <span>📂 Chọn File</span>
+          </label>
+          <button class="btn-icon-drive" id="btnSelectDrive" title="Chọn từ Google Drive">
+            ☁️ Drive
+          </button>
+        </div>
+        
+        <div id="fileStatusLabel" class="file-status">Chưa chọn đề</div>
+        
+        <div class="action-group">
+          <div class="time-wrapper">
+            <input type="number" id="timeInput" min="1" max="180" value="15" class="input-time">
+            <span class="unit">phút</span>
+          </div>
+          <button class="btn-start" id="btnStart" disabled>Bắt đầu ▶</button>
+        </div>
+      </div>
 
-      <!-- Mobile / tablet: nút nộp bài -->
-      <button id="btnGradeHeader" class="btn btn-primary header-submit-btn">
-        Nộp bài
-      </button>
-
-      <!-- Mobile / tablet: nút mở bảng câu hỏi -->
-      <button id="btnToggleNavMobile" class="btn btn-secondary header-question-btn">
-        📋 Câu hỏi
-      </button>
-
-      <button
-        type="button"
-        id="headerToggle"
-        class="header-toggle"
-        title="Thu gọn / mở rộng thanh trên cùng"
-      >
-        ▲
-      </button>
+      <div id="statusPanel" class="status-panel" style="display:none;">
+  <div class="status-info">
+    <div id="examName" class="exam-name-display">Đang tải...</div>
+    <div style="font-size:18px; margin-right:5px;">⏱️</div> 
+    <div id="timer" class="timer-display">--:--</div>
+  </div>
+  
+  <div class="status-actions">
+    <button id="btnGradeHeader" class="btn-finish">Nộp bài</button>
+    <button id="btnReset" class="btn-outline">↺ Làm lại</button>
+    
+    <button id="btnToggleNavMobileInHeader" class="btn-tool mobile-only" style="border:none; background:transparent; font-size:20px;">📋</button>
+  </div>
+</div>
     </div>
+
+    <div class="header-right">
+      <div id="topResult" class="mini-score" style="display:none;">--%</div>
+      <button id="btnViewHistory" class="btn-tool" title="Xem lịch sử">📊</button>
+      <div class="user-dropdown">
+        <button id="btnLogin" class="btn-login">Đăng nhập</button>
+        <div id="userSection" style="display:none;" class="user-info">
+          <img id="userAvatar" src="" alt="User">
+          <button id="btnLogout" class="btn-logout">Exit</button>
+        </div>
+      </div>
+      <button id="btnToggleNavMobile" class="btn-tool mobile-only">📋</button>
+    </div>
+
+    <button id="btnToggleHeaderMobile" class="header-toggle-btn mobile-only">▲</button>
   </header>
+
+  <div id="examHistorySummary" class="history-summary-alert" style="display:none;"></div>
 
   <main class="exam-body">
     <section class="exam-main">
       <div id="quiz">
-        <p class="muted">
-          Chưa có đề. Hãy chọn file <b>.json</b> và nhập thời gian rồi bấm
-          <b>“Tạo đề &amp; bắt đầu thi”</b>.
-        </p>
+        <div class="welcome-state">
+          <div class="welcome-icon">👋</div>
+          <h3>Sẵn sàng thử thách?</h3>
+          <p>Chọn đề thi ở trên, cài đặt thời gian và nhấn nút <b>"Bắt đầu"</b>.</p>
+        </div>
       </div>
     </section>
 
-    <!-- Wrapper bảng câu hỏi: desktop = sidebar, mobile = overlay -->
     <div id="questionNavOverlay" class="question-nav-overlay">
       <aside class="question-nav" id="questionNavPanel">
         <div class="question-nav-header">
-          <div>
-            <div class="question-nav-title">Câu hỏi</div>
-            <div class="question-nav-sub">Nhấn số để nhảy tới câu.</div>
-          </div>
-          <button
-            id="questionNavCloseBtn"
-            class="question-nav-close"
-            aria-label="Đóng bảng câu hỏi"
-          >
-            ✕
-          </button>
+          <span class="qnav-title" style="font-size:16px;">Danh sách câu hỏi</span>
+          <button id="questionNavCloseBtn" class="close-btn" style="border:none; background:#f1f5f9; width:32px; height:32px; border-radius:50%; font-weight:bold; color:#64748b; font-size:16px;">✕</button>
         </div>
+        
+        <div id="questionList" class="question-list"></div>
 
-        <div id="questionList" class="question-list">
-          <!-- JS render số câu -->
-        </div>
-
-        <!-- Nút nộp bài (desktop) -->
-        <button id="btnGradeNav" class="btn btn-primary nav-submit-btn">
-          Nộp bài
+        <button id="btnGradeNav" class="nav-submit" style="width:100%; margin-top:20px; padding:12px; background:#ef4444; color:white; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
+          Nộp bài ngay
         </button>
       </aside>
     </div>
   </main>
 
   <footer class="exam-footer">
-    <div class="footer-left">
-      <p class="muted" id="noteArea"></p>
-    </div>
-    <div class="footer-right">
-      <p class="result-text" id="result"></p>
-    </div>
+    <div id="noteArea" class="footer-note"></div>
+    <div id="result" class="footer-result"></div>
   </footer>
 </div>
 
+<div id="historyModal" class="modal-overlay" style="display:none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="historyModalTitle">Hồ sơ học tập</h3>
+      <button id="btnCloseHistory" style="border:none; background:none; font-size:20px; cursor:pointer;">✕</button>
+    </div>
+
+    <div id="historyOverview" class="history-overview" style="display:none;">
+      </div>
+
+    <div class="history-tabs">
+      <button class="tab-btn active" onclick="switchHistoryTab('stats')">⚠️ Câu hay sai</button>
+      <button class="tab-btn" onclick="switchHistoryTab('timeline')">📜 Lịch sử chi tiết</button>
+    </div>
+    <div class="modal-body">
+      <div id="tabStats" class="tab-content active">
+        <div id="filterArea" class="stats-filter-wrapper" style="padding:10px 0;">
+          <label>Đang xem thống kê của:</label>
+          <select id="statsFilter" class="stats-select" onchange="filterStats()" style="padding:4px;">
+            <option value="all">-- Tất cả các đề --</option>
+          </select>
+        </div>
+        <div id="currentExamLabel" class="exam-focus-label" style="display:none;"></div>
+        <div id="statsList"></div>
+      </div>
+      <div id="tabTimeline" class="tab-content" style="display:none;">
+        <div id="timelineList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <script src="https://apis.google.com/js/api.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCnLETNGt33ZGsDwcil5XoX6wz0vktp-pk",
+    authDomain: "tracnghiem-9ec40.firebaseapp.com",
+    projectId: "tracnghiem-9ec40",
+    storageBucket: "tracnghiem-9ec40.firebasestorage.app",
+    messagingSenderId: "138196718538",
+    appId: "1:138196718538:web:9cab9bfbe62f612821b533"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const provider = new firebase.auth.GoogleAuthProvider();
+</script>
 <script src="app.js"></script>
 </body>
 </html>
