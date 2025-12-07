@@ -11,7 +11,8 @@ const API_KEYS = [
     "AIzaSyBK7FLMfkb3Ij1yuxz7uavpPvGnMBAH9_0",  
     "AIzaSyA9drRXuLhODSaCJbq7E80arJRuDS0di0U",                 // Điền thêm Key phụ vào đây
     "AIzaSyBB4fEmx_62N-5QEDptlXDXaBDlESRE1ck",
-    "AIzaSyAXx9RY0EuNmbkpgZYH_jsgqR3WK6022tQ"
+    "AIzaSyAXx9RY0EuNmbkpgZYH_jsgqR3WK6022tQ",
+    "AIzaSyC8KUOTlZBi176iZtkN5viOjVhQHnJ-h78"
 ];
 
 let currentKeyIndex = 0; // Bắt đầu dùng từ Key đầu tiên
