@@ -7,7 +7,25 @@ import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 // CẤU HÌNH API KEY
 // ========================
 // HÃY ĐIỀN API KEY CỦA BẠN VÀO ĐÂY (Lấy tại aistudio.google.com)
-const GEMINI_API_KEY = "AIzaSyBK7FLMfkb3Ij1yuxz7uavpPvGnMBAH9_0"; 
+const API_KEYS = [
+    "AIzaSyBK7FLMfkb3Ij1yuxz7uavpPvGnMBAH9_0",  
+    "AIzaSyA9drRXuLhODSaCJbq7E80arJRuDS0di0U",                 // Điền thêm Key phụ vào đây
+    "AIzaSyBB4fEmx_62N-5QEDptlXDXaBDlESRE1ck",
+    "AIzaSyAXx9RY0EuNmbkpgZYH_jsgqR3WK6022tQ"
+];
+
+let currentKeyIndex = 0; // Bắt đầu dùng từ Key đầu tiên
+
+// Hàm xoay vòng Key
+function rotateKey() {
+    currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
+    console.log(`⚠️ Đổi sang Key số ${currentKeyIndex + 1}`);
+}
+
+function getCurrentKey() {
+    return API_KEYS[currentKeyIndex];
+}
+
 
 // ========================
 // BIẾN TOÀN CỤC
@@ -428,98 +446,148 @@ function renderAIContent(attemptData) {
   }
 }
 
-async function analyzeWithGemini() {
+// ========================
+// HÀM GỌI AI (PHIÊN BẢN KHOA HỌC & TOÀN DIỆN)
+// ========================
+async function analyzeWithGemini(forceUpdate = false) {
   const aiBtn = document.getElementById("btnAnalyzeAI");
   const resultBox = document.getElementById("aiResultBox");
   const loading = document.getElementById("aiLoading");
   const content = document.getElementById("aiContent");
   const expandBtn = document.getElementById("btnExpandAI");
-  const aiSelect = document.getElementById("aiHistorySelect"); // Lấy thanh chọn
+  const reAnalyzeBtn = document.getElementById("btnReAnalyzeAI");
+  const aiSelect = document.getElementById("aiHistorySelect");
 
-  if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("HAY_DIEN")) {
+  if (!API_KEYS || API_KEYS.length === 0) {
     alert("Chưa cấu hình API Key!"); return;
   }
 
-  // 1. XÁC ĐỊNH LẦN LÀM BÀI DỰA VÀO DROPDOWN
+  // 1. Lấy ID từ dropdown
   const selectedId = aiSelect.value;
-  if (!selectedId) { alert("Vui lòng chọn lần làm bài cần phân tích."); return; }
-
-  // Tìm đối tượng bài làm trong mảng globalHistoryData dựa vào ID
+  if (!selectedId) { alert("Vui lòng chọn lần làm bài."); return; }
   const targetAttempt = globalHistoryData.find(h => h.id === selectedId);
-  
-  if (!targetAttempt) { alert("Không tìm thấy dữ liệu bài làm này."); return; }
+  if (!targetAttempt) return;
 
-  // 2. LOGIC GỌI AI
+  // 2. KIỂM TRA: Nếu đã có lời giải VÀ không ép chạy lại -> Hiện cái cũ
+  if (targetAttempt.aiAnalysis && !forceUpdate) {
+      renderAIContent(targetAttempt);
+      return;
+  }
+
+  // 3. Lấy lỗi sai (Lấy nhiều hơn để phân tích xu hướng)
   const mistakes = targetAttempt.details.filter(q => !q.s); 
-  if (mistakes.length === 0) { alert("Lần này bạn đúng hết, không cần AI sửa!"); return; }
+  if (mistakes.length === 0) {
+      alert("Bạn đúng 100%! Không có gì để phân tích."); return;
+  }
 
-  const limitedMistakes = mistakes.slice(0, 3);
+  // Gửi tối đa 8 câu sai để AI nhìn thấy "bức tranh toàn cảnh"
+  const limitedMistakes = mistakes.slice(0, 8);
   const mistakesJson = limitedMistakes.map(m => ({
       question: m.q, userAnswer: m.u || "Bỏ trống", correctAnswer: m.a
   }));
 
+  // UI Loading
   resultBox.style.display = "block";
-  loading.style.display = "flex";
+  if(loading) loading.style.display = "flex"; 
   content.innerHTML = "";
+  
   aiBtn.disabled = true;
+  aiBtn.textContent = forceUpdate ? "♻️ Đang tổng hợp báo cáo..." : "⏳ Đang phân tích chuyên sâu...";
+  reAnalyzeBtn.style.display = "none"; 
 
-  const candidateModels = [
-    "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash-lite", "gemini-1.5-flash"
-  ];
-
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-  const prompt = `
-  Bạn là gia sư AI vui tính. Học sinh sai các câu này: ${JSON.stringify(mistakesJson)}
-  Giải thích ngắn gọn tại sao sai và cho MẸO GHI NHỚ (thơ/vè).
-  Trả về HTML (không markdown): 
-  <div class="ai-response-item">
-    <span class="ai-response-q">Tiêu đề câu hỏi</span>
-    <div class="ai-explanation">Giải thích ngắn...</div>
-    <div class="ai-response-tip">💡 Mẹo: ...</div>
-  </div>. 
-  Dùng emoji sinh động.
-  `;
-
+  // --- LOGIC KEY POOL ---
   let success = false;
   let finalHtml = "";
+  // Ưu tiên model thông minh nhất để phân tích logic (2.5 hoặc 2.0)
+  const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"];
 
-  for (const modelName of candidateModels) {
-    try {
-      const model = genAI.getGenerativeModel({ model: modelName });
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      finalHtml = response.text().replace(/```html/g, "").replace(/```/g, "");
-      success = true;
-      break; 
-    } catch (error) { console.error(error); }
+  for (let k = 0; k < API_KEYS.length; k++) {
+      const activeKey = getCurrentKey();
+      console.log(`🔄 Key đang dùng: ...${activeKey.slice(-4)}`);
+
+      try {
+          const genAI = new GoogleGenerativeAI(activeKey);
+          
+          for (const modelName of candidateModels) {
+              try {
+                  const model = genAI.getGenerativeModel({ model: modelName });
+                  
+                  // --- PROMPT KHOA HỌC ---
+                  const prompt = `
+                  Bạn là một Chuyên gia Phân tích Giáo dục và Gia sư AI cao cấp.
+                  Học sinh vừa làm bài thi và sai các câu dưới đây (JSON):
+                  ${JSON.stringify(mistakesJson)}
+
+                  Nhiệm vụ của bạn là tạo một BÁO CÁO PHÂN TÍCH TOÀN DIỆN dưới dạng HTML (không markdown):
+
+                  1. **PHẦN 1: CHẨN ĐOÁN & GIẢI PHÁP (Dashboard)**
+                     - Phân tích xu hướng sai: Học sinh đang yếu ở mảng nào? (Ví dụ: Hay sai ngày tháng lịch sử, chưa nắm rõ định nghĩa, hay bị bẫy câu chữ, hay yếu phần tính toán...).
+                     - Đưa ra giải pháp cụ thể để cải thiện (Ví dụ: Kẻ bảng so sánh, học lại chương nào, chú ý từ khóa gì).
+                     - Trả về cấu trúc HTML:
+                     <div class="ai-dashboard">
+                        <div class="ai-card card-weakness">
+                            <div class="ai-card-title">📉 Điểm yếu cốt lõi</div>
+                            <div class="ai-card-content">...Nội dung phân tích...</div>
+                        </div>
+                        <div class="ai-card card-solution">
+                            <div class="ai-card-title">💊 Phác đồ cải thiện</div>
+                            <div class="ai-card-content">...Lời khuyên cụ thể...</div>
+                        </div>
+                     </div>
+
+                  2. **PHẦN 2: CHI TIẾT SỬA LỖI**
+                     - Giải thích ngắn gọn tại sao sai.
+                     - Đưa ra MẸO GHI NHỚ (thơ, vè, liên tưởng) cho từng câu.
+                     - Cấu trúc HTML cho mỗi câu:
+                     <div class="ai-response-item">
+                        <span class="ai-response-q">Câu hỏi...</span>
+                        <div class="ai-explanation">Giải thích...</div>
+                        <div class="ai-response-tip">💡 Mẹo: ...</div>
+                     </div>
+
+                  Yêu cầu: Giọng văn chuyên nghiệp nhưng thân thiện, khích lệ. Dùng emoji phù hợp.
+                  `;
+
+                  const result = await model.generateContent(prompt);
+                  let rawHtml = result.response.text().replace(/```html/g, "").replace(/```/g, "");
+                  
+                  if(rawHtml.length > 50) {
+                      // Thêm footer phiên bản
+                      finalHtml = rawHtml + `
+                        <div class="ai-model-footer">
+                            ⚡ Phân tích bởi: <span class="ai-model-badge">${modelName}</span>
+                            <span style="margin-left:5px;">(Key ${k + 1})</span>
+                        </div>
+                      `;
+                      success = true;
+                      break; 
+                  }
+              } catch (errModel) { console.log(`Model ${modelName} lỗi, thử tiếp...`); }
+          }
+      } catch (errKey) { console.error("Key lỗi:", errKey); }
+
+      if (success) break; 
+      rotateKey();
   }
 
   if (success) {
-    content.innerHTML = finalHtml;
-    expandBtn.style.display = "block";
-    aiBtn.textContent = "✅ Đã có lời giải (Đã lưu)";
-    
-    // --- LƯU VÀO ĐÚNG ID CỦA LẦN LÀM BÀI ĐANG CHỌN ---
+    targetAttempt.aiAnalysis = finalHtml;
     try {
         const user = auth.currentUser;
         if (user && targetAttempt.id) {
             await db.collection("users").doc(user.uid).collection("history").doc(targetAttempt.id).update({
                 aiAnalysis: finalHtml
             });
-            console.log("Đã lưu AI cho lần làm bài:", targetAttempt.dateStr);
-            
-            // Cập nhật dữ liệu cục bộ để không cần load lại trang
-            targetAttempt.aiAnalysis = finalHtml; 
         }
-    } catch (e) { console.error("Lỗi lưu AI:", e); }
-    // --------------------------------------------------
+    } catch (e) { console.error(e); }
 
+    renderAIContent(targetAttempt);
   } else {
-    content.innerHTML = `<p style="color:red">Hết lượt hoặc lỗi kết nối.</p>`;
+    content.innerHTML = `<p style="color:red; text-align:center; padding:20px;">❌ Hệ thống đang bận. Vui lòng thử lại sau.</p>`;
+    aiBtn.disabled = false;
+    aiBtn.textContent = "Thử lại";
+    if(loading) loading.style.display = "none";
   }
-
-  loading.style.display = "none";
-  aiBtn.disabled = false;
 }
 
 // Gắn hàm vào nút bấm

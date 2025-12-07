@@ -462,13 +462,70 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: v
 @keyframes slideUpCard { to { opacity: 1; transform: translateY(0); } }
 
 /* Mobile Responsive */
+/* =========================================
+   MOBILE OPTIMIZATION (GIAO DIỆN SHEET)
+   ========================================= */
+
 @media (max-width: 600px) {
-  #aiResultBox.expanded { padding: 0 !important; }
-  #aiResultBox.expanded #aiContent {
-    width: 100%; height: 100%; max-height: 100vh;
-    border-radius: 0;
-    padding: 60px 20px 20px 20px; /* Chừa chỗ cho nút đóng */
+  /* 1. Biến Popup thành dạng Bottom Sheet (Trượt từ dưới lên) */
+  #aiResultBox.expanded {
+    align-items: flex-end !important; /* Đẩy nội dung xuống đáy màn hình */
+    padding: 0 !important;
   }
+  
+  #aiResultBox.expanded #aiContent {
+    width: 100%;
+    height: 85vh; /* Chiếm 85% chiều cao màn hình */
+    max-height: 85vh;
+    border-radius: 24px 24px 0 0; /* Bo tròn mạnh 2 góc trên */
+    margin: 0;
+    
+    /* Padding to hơn để tránh bị che bởi tai thỏ hoặc thanh điều hướng */
+    padding: 60px 24px 80px 24px; 
+    
+    /* Hiệu ứng trượt lên mượt mà */
+    transform: translateY(100%);
+    animation: slideUpMobile 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  }
+
+  /* 2. Nút Đóng: Làm to ra, dễ bấm hơn */
+  #aiResultBox.expanded .btn-close-ai-expanded {
+    top: 16px;
+    right: 16px;
+    width: 44px; /* To hơn (chuẩn touch target) */
+    height: 44px;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 18px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  #aiResultBox.expanded .btn-close-ai-expanded:active {
+    background: #e2e8f0;
+    transform: scale(0.95);
+  }
+
+  /* 3. Chữ to hơn một chút cho dễ đọc */
+  .ai-response-q { font-size: 17px; line-height: 1.4; }
+  #aiResultBox.expanded #aiContent { font-size: 16px; }
+  
+  /* 4. Thanh gạch ngang nhỏ (Handle) báo hiệu có thể kéo xuống */
+  #aiResultBox.expanded #aiContent::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 5px;
+    background: #e2e8f0;
+    border-radius: 10px;
+  }
+}
+
+/* Animation trượt lên cho Mobile */
+@keyframes slideUpMobile {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
 
 /* Khóa cuộn trang web nền */
@@ -477,3 +534,94 @@ body.ai-open { overflow: hidden; }
 .ai-response-item { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e0e7ff; }
 .ai-response-q { font-size: 15px; margin-bottom: 8px; color: #4338ca; border-bottom: 1px solid #e0e7ff; padding-bottom: 6px; }
 .ai-response-tip { background: #fdf4ff; border-left: 4px solid #d946ef; padding: 10px; border-radius: 6px; font-size: 14px; color: #86198f; margin-top: 8px; }
+
+/* --- AI MODEL TAG (CHÚ THÍCH PHIÊN BẢN) --- */
+.ai-model-footer {
+  margin-top: 20px;
+  padding-top: 10px;
+  border-top: 1px dashed #e2e8f0;
+  text-align: right;
+  font-size: 11px;
+  color: #94a3b8;
+  font-family: monospace;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.ai-model-badge {
+  background: #f1f5f9;
+  color: #475569;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  font-weight: 600;
+}
+
+/* --- AI REPORT DASHBOARD (BÁO CÁO KHOA HỌC) --- */
+
+.ai-dashboard {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin-bottom: 25px;
+}
+
+.ai-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-card-title {
+  font-size: 14px;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ai-card-content {
+  font-size: 15px;
+  color: #334155;
+  line-height: 1.6;
+}
+
+.ai-card-content ul {
+  margin: 0; padding-left: 20px;
+}
+.ai-card-content li { margin-bottom: 6px; }
+
+/* Màu sắc riêng cho từng thẻ */
+.card-weakness { border-left: 4px solid #ef4444; background: #fef2f2; }
+.card-weakness .ai-card-title { color: #b91c1c; }
+
+.card-solution { border-left: 4px solid #3b82f6; background: #eff6ff; }
+.card-solution .ai-card-title { color: #1d4ed8; }
+
+/* Tiêu đề phần chi tiết */
+.ai-section-title {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: #1e293b;
+  margin: 30px 0 20px 0;
+  position: relative;
+}
+.ai-section-title::before, .ai-section-title::after {
+  content: ""; display: inline-block; width: 40px; height: 2px;
+  background: #e2e8f0; vertical-align: middle; margin: 0 10px;
+}
+
+/* Mobile: Xếp chồng thẻ lên nhau */
+@media (max-width: 600px) {
+  .ai-dashboard { grid-template-columns: 1fr; }
+}
