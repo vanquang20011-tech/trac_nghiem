@@ -401,48 +401,42 @@ function renderAIContent(attemptData) {
   const aiContent = document.getElementById("aiContent");
   const aiBtn = document.getElementById("btnAnalyzeAI");
   const expandBtn = document.getElementById("btnExpandAI");
-  const reAnalyzeBtn = document.getElementById("btnReAnalyzeAI"); // Nút mới
+  const reAnalyzeBtn = document.getElementById("btnReAnalyzeAI");
   const loading = document.getElementById("aiLoading");
 
-  // 1. Reset trạng thái chung
+  // --- FIX LỖI LOADING TẠI ĐÂY ---
   aiResultBox.style.display = "none";
+  aiResultBox.classList.remove("is-loading"); // <--- QUAN TRỌNG: Xóa class gây lỗi
+  if (loading) loading.style.display = "none";
+  // -------------------------------
+
   aiContent.innerHTML = "";
   expandBtn.style.display = "none";
-  reAnalyzeBtn.style.display = "none"; // Ẩn nút giải lại
-  if (loading) loading.style.display = "none"; // Đảm bảo tắt loading
-
-  // 2. Kiểm tra dữ liệu
+  reAnalyzeBtn.style.display = "none";
+  
+  // ... (Phần còn lại của hàm giữ nguyên) ...
   if (attemptData.aiAnalysis) {
-      // ==> TRƯỜNG HỢP 1: ĐÃ CÓ LỜI GIẢI
       aiResultBox.style.display = "block";
       aiContent.innerHTML = attemptData.aiAnalysis;
-      
-      expandBtn.style.display = "block"; // Hiện nút phóng to
-      reAnalyzeBtn.style.display = "block"; // Hiện nút Giải lại
-      
-      // Nút chính chuyển thành trạng thái "Đã xong" và không bấm được (để tránh bấm nhầm)
+      expandBtn.style.display = "block";
+      reAnalyzeBtn.style.display = "block";
       aiBtn.textContent = "✅ Đã có lời giải (Đã lưu)";
       aiBtn.disabled = true; 
-      aiBtn.style.background = "#cbd5e1"; // Màu xám nhạt
+      aiBtn.style.background = "#cbd5e1";
       aiBtn.style.cursor = "default";
       aiBtn.style.boxShadow = "none";
-
   } else {
-      // ==> TRƯỜNG HỢP 2: CHƯA CÓ LỜI GIẢI
-      // Reset style nút chính về màu tím đẹp
       aiBtn.disabled = false;
       aiBtn.style.background = "linear-gradient(135deg, #8b5cf6, #d946ef)";
       aiBtn.style.cursor = "pointer";
       aiBtn.style.boxShadow = "0 4px 10px rgba(139, 92, 246, 0.3)";
-      
       aiBtn.textContent = "✨ Phân tích lỗi sai";
       
-      // Kiểm tra nếu đúng 100%
       const mistakes = (attemptData.details || []).filter(q => !q.s);
       if (mistakes.length === 0) {
         aiBtn.textContent = "🎉 Lần này đúng 100%!";
         aiBtn.disabled = true;
-        aiBtn.style.background = "#10b981"; // Màu xanh lá
+        aiBtn.style.background = "#10b981";
       }
   }
 }
@@ -909,33 +903,34 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   updateFileStatus("", false); 
 
-  // --- SỰ KIỆN PHÓNG TO / THU NHỎ (FIX GIAO DIỆN & LOADING) ---
+  // --- SỰ KIỆN PHÓNG TO / THU NHỎ (FIX LỖI HIỂN THỊ) ---
   const aiBox = document.getElementById("aiResultBox");
   const expandBtn = document.getElementById("btnExpandAI");
   const closeExpandedBtn = document.getElementById("btnCloseExpanded");
   const aiSectionParent = document.getElementById("aiSection");
 
-  // Nút đóng mới: Sửa lại text thành dấu X cho đẹp (vì CSS đã làm tròn nút)
   if(closeExpandedBtn) closeExpandedBtn.textContent = "✕";
 
   const toggleExpand = () => {
     const isExpanded = aiBox.classList.contains("expanded");
+    const loadingDiv = document.getElementById("aiLoading");
+    const aiContent = document.getElementById("aiContent");
     
     if (!isExpanded) {
         // ==> BẬT PHÓNG TO
-        // 1. Dịch chuyển box ra body
+        // 1. Chuyển box ra body để thoát khỏi modal nhỏ
         document.body.appendChild(aiBox);
         
-        // 2. Thêm class style
-        aiBox.classList.add("expanded");
-        document.body.classList.add("ai-open");
+        // 2. Thêm class (Sử dụng requestAnimationFrame để đảm bảo render mượt)
+        requestAnimationFrame(() => {
+            aiBox.classList.add("expanded");
+            document.body.classList.add("ai-open");
+        });
         
-        // 3. Ẩn nút phóng to nhỏ
         if(expandBtn) expandBtn.style.display = "none";
         
-        // 4. Kiểm tra xem có đang loading không để thêm class xử lý giao diện
-        const loadingDiv = document.getElementById("aiLoading");
-        if (loadingDiv && loadingDiv.style.display !== "none") {
+        // 3. Xử lý loading: Chỉ hiện loading nếu đang chạy thật sự
+        if (loadingDiv && loadingDiv.style.display !== "none" && (!aiContent.innerHTML || aiContent.innerHTML.trim() === "")) {
             aiBox.classList.add("is-loading");
         } else {
             aiBox.classList.remove("is-loading");
@@ -947,44 +942,51 @@ document.addEventListener("DOMContentLoaded", () => {
         aiBox.classList.remove("is-loading");
         document.body.classList.remove("ai-open");
         
-        // Đưa về chỗ cũ
+        // Đưa về chỗ cũ ngay lập tức
         aiSectionParent.appendChild(aiBox);
         
-        // Hiện lại nút nhỏ
         if(expandBtn) expandBtn.style.display = "block";
-        expandBtn.textContent = "⛶";
     }
   };
 
   if(expandBtn) expandBtn.onclick = toggleExpand;
   if(closeExpandedBtn) closeExpandedBtn.onclick = toggleExpand;
   
-  // Phím ESC để thoát
+  // Phím ESC
   document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && aiBox && aiBox.classList.contains("expanded")) {
           toggleExpand();
       }
   });
 
-  // Bấm ra ngoài vùng trắng để đóng
+  // Bấm vào vùng trống hoặc nội dung để đóng/mở
   if(aiBox) {
       aiBox.onclick = (e) => {
-          // Nếu đang expanded và bấm vào vùng nền tối (aiBox), chứ không phải bấm vào nội dung (aiContent)
-          if (aiBox.classList.contains("expanded") && e.target === aiBox) {
-              toggleExpand();
+          // 1. Nếu ĐANG phóng to: Chỉ đóng khi bấm vào vùng đen (nền), không đóng khi bấm vào nội dung
+          if (aiBox.classList.contains("expanded")) {
+              if (e.target === aiBox) {
+                  toggleExpand();
+              }
+          } 
+          // 2. Nếu CHƯA phóng to: Bấm đâu cũng mở (trừ nút đóng)
+          else {
+              // Tránh xung đột nếu bấm vào nút đóng (dù nút đóng thường ẩn ở chế độ này)
+              if (!e.target.classList.contains('btn-close-ai-expanded')) {
+                  toggleExpand();
+              }
           }
       };
   }
 
-  // Sự kiện nút Phân tích chính (Chạy lần đầu)
+  // Sự kiện nút Phân tích chính
   document.getElementById("btnAnalyzeAI").onclick = () => analyzeWithGemini(false);
 
-  // Sự kiện nút Giải lại (Chạy lại ép buộc)
+  // Sự kiện nút Giải lại
   const btnRe = document.getElementById("btnReAnalyzeAI");
   if (btnRe) {
       btnRe.onclick = () => {
           if(confirm("Bạn có chắc muốn chạy lại AI không?\n(Sẽ tốn thêm 1 lượt dùng trong ngày)")) {
-              analyzeWithGemini(true); // Truyền true để ép chạy lại
+              analyzeWithGemini(true); 
           }
       };
   }

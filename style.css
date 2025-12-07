@@ -319,309 +319,350 @@ body { font-family: 'Inter', system-ui, -apple-system, sans-serif; background: v
 }
 .btn-icon-small:hover { background: #f1f5f9; color: #3b82f6; border-color: #3b82f6; }
 
+/* --- AI REPORT DASHBOARD --- */
+.ai-dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+.ai-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+.ai-card-title { font-size: 14px; text-transform: uppercase; font-weight: 700; color: #64748b; display: flex; align-items: center; gap: 8px; }
+.ai-card-content { font-size: 15px; color: #334155; line-height: 1.6; }
+.ai-card-content ul { margin: 0; padding-left: 20px; }
+.ai-card-content li { margin-bottom: 6px; }
+.card-weakness { border-left: 4px solid #ef4444; background: #fef2f2; }
+.card-weakness .ai-card-title { color: #b91c1c; }
+.card-solution { border-left: 4px solid #3b82f6; background: #eff6ff; }
+.card-solution .ai-card-title { color: #1d4ed8; }
+.ai-model-footer { margin-top: 20px; padding-top: 10px; border-top: 1px dashed #e2e8f0; text-align: right; font-size: 11px; color: #94a3b8; font-family: monospace; display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+.ai-model-badge { background: #f1f5f9; color: #475569; padding: 2px 6px; border-radius: 4px; border: 1px solid #cbd5e1; font-weight: 600; }
+@media (max-width: 600px) { .ai-dashboard { grid-template-columns: 1fr; } }
+
 /* =========================================
-   AI EXPANDED POPUP (GIAO DIỆN HIỆN ĐẠI)
+   AI EXPANDED POPUP (FIXED FINAL - KHÔNG BỊ LỆCH)
    ========================================= */
 
-/* 1. Lớp nền tối mờ (Backdrop) */
+/* 1. NỀN TỐI (BACKDROP) */
 #aiResultBox.expanded {
   position: fixed !important;
-  top: 0; left: 0; 
-  width: 100vw; height: 100vh;
-  z-index: 999999 !important;
-  background: rgba(15, 23, 42, 0.7); /* Màu tối hiện đại */
-  backdrop-filter: blur(8px); /* Làm mờ nền đằng sau */
+  /* Dùng inset: 0 để full màn hình chuẩn xác, không bị thò ra ngoài */
+  top: 0; left: 0; right: 0; bottom: 0; 
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 999999 !important; /* Đè lên tất cả */
+  background: rgba(15, 23, 42, 0.85); /* Nền tối */
+  backdrop-filter: blur(5px);
   display: flex !important;
-  align-items: center;
-  justify-content: center;
-  margin: 0 !important;
-  padding: 20px !important; /* Padding để không dính sát mép màn hình */
+  align-items: center; justify-content: center;
+  margin: 0 !important; padding: 0 !important;
   border: none !important;
-  border-radius: 0 !important;
-  opacity: 0;
-  animation: fadeInBackdrop 0.3s forwards;
+  
+  /* QUAN TRỌNG: Ép hiện nội dung, tránh lỗi màn hình đen */
+  opacity: 1 !important; 
+  transform: none !important;
+  visibility: visible !important;
 }
 
-/* 2. Hộp nội dung chính (White Card) */
+/* 2. THẺ NỘI DUNG (CARD) - DESKTOP */
 #aiResultBox.expanded #aiContent {
   position: relative;
-  width: 100%;
-  max-width: 800px; /* Độ rộng vừa mắt đọc */
+  display: block !important; /* Bắt buộc hiện */
+  width: 90%;
+  max-width: 800px;
   height: auto;
-  max-height: 85vh; /* Không quá cao so với màn hình */
+  max-height: 85vh;
   background: #ffffff;
   border-radius: 20px;
-  box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
   padding: 40px;
-  overflow-y: auto; /* Cho phép cuộn bên trong hộp */
-  font-family: 'Inter', sans-serif;
-  font-size: 16px;
-  line-height: 1.7;
-  color: #334155;
+  overflow-y: auto;
   
-  /* Hiệu ứng trồi lên */
-  transform: translateY(20px);
-  opacity: 0;
-  animation: slideUpCard 0.4s 0.1s forwards cubic-bezier(0.16, 1, 0.3, 1);
+  /* Reset mọi hiệu ứng ẩn cũ */
+  opacity: 1 !important;
+  transform: translateZ(0);
 }
 
-/* 3. Nút Đóng (Close Button) - Thiết kế dạng icon tròn */
-.btn-close-ai-expanded {
-  display: none; /* Mặc định ẩn trong chế độ thường */
-}
+/* 3. NÚT ĐÓNG (DẤU X) */
+.btn-close-ai-expanded { display: none; }
 
 #aiResultBox.expanded .btn-close-ai-expanded {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: center; justify-content: center;
   position: absolute;
-  top: 20px;
-  right: 20px;
-  width: 40px;
-  height: 40px;
-  background: #f1f5f9;
-  color: #64748b;
-  border: none;
-  border-radius: 50%;
-  font-size: 20px;
-  font-weight: bold;
-  cursor: pointer;
-  z-index: 10;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  top: 15px; right: 15px;
+  width: 40px; height: 40px;
+  background: #f1f5f9; color: #64748b;
+  border: none; border-radius: 50%;
+  font-size: 20px; font-weight: bold;
+  cursor: pointer; z-index: 50;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  transition: all 0.2s;
 }
-
 #aiResultBox.expanded .btn-close-ai-expanded:hover {
-  background: #ef4444;
-  color: white;
-  transform: rotate(90deg); /* Xoay nhẹ khi hover */
+  background: #ef4444; color: white;
 }
 
-/* 4. Fix lỗi Loading bị đè */
-#aiResultBox.expanded #aiLoading {
-  display: none !important; /* Ẩn loading cũ đi nếu đang hiển thị nội dung */
-}
-/* Nếu đang thực sự loading (chưa có content), ta style riêng loading to ở giữa */
+/* 4. XỬ LÝ LOADING (FIX LỖI XOAY VÒNG) */
+#aiResultBox.expanded #aiLoading { display: none !important; }
+
+/* Chỉ khi có class .is-loading mới hiện spinner */
+#aiResultBox.expanded.is-loading #aiContent { display: none !important; }
 #aiResultBox.expanded.is-loading #aiLoading {
   display: flex !important;
   flex-direction: column;
-  color: white;
-  font-size: 18px;
+  align-items: center; justify-content: center;
+  color: white; font-size: 16px; font-weight: 600; gap: 15px;
 }
-#aiResultBox.expanded.is-loading #aiContent {
-  display: none; /* Ẩn hộp trắng khi đang loading để hiện spinner trên nền tối */
-}
-
-/* 5. Tùy chỉnh thanh cuộn cho đẹp */
-#aiResultBox.expanded #aiContent::-webkit-scrollbar {
-  width: 8px;
-}
-#aiResultBox.expanded #aiContent::-webkit-scrollbar-track {
-  background: #f1f5f9;
-  border-radius: 4px;
-}
-#aiResultBox.expanded #aiContent::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
-#aiResultBox.expanded #aiContent::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+#aiResultBox.expanded.is-loading .spinner {
+  border-color: rgba(255,255,255,0.3); border-top-color: #fff;
+  width: 40px; height: 40px; border-width: 4px;
 }
 
-/* 6. Style nội dung AI bên trong (Headers, Tips) */
-.ai-response-item {
-  border-bottom: 1px solid #e2e8f0;
-  padding-bottom: 20px;
-  margin-bottom: 20px;
-}
-.ai-response-item:last-child { border-bottom: none; }
-
-.ai-response-q {
-  display: block;
-  font-weight: 700;
-  color: #1e40af;
-  font-size: 18px;
-  margin-bottom: 10px;
-}
-
-.ai-response-tip {
-  margin-top: 15px;
-  background: #fff5f5; /* Nền hồng phấn nhẹ */
-  border-left: 4px solid #f472b6;
-  padding: 15px;
-  border-radius: 8px;
-  color: #be185d;
-  font-style: italic;
-  font-size: 15px;
-  display: flex;
-  gap: 10px;
-}
-
-/* Animation Keyframes */
-@keyframes fadeInBackdrop { to { opacity: 1; } }
-@keyframes slideUpCard { to { opacity: 1; transform: translateY(0); } }
-
-/* Mobile Responsive */
-/* =========================================
-   MOBILE OPTIMIZATION (GIAO DIỆN SHEET)
-   ========================================= */
-
+/* 5. GIAO DIỆN MOBILE (TRƯỢT TỪ DƯỚI LÊN) */
 @media (max-width: 600px) {
-  /* 1. Biến Popup thành dạng Bottom Sheet (Trượt từ dưới lên) */
   #aiResultBox.expanded {
-    align-items: flex-end !important; /* Đẩy nội dung xuống đáy màn hình */
-    padding: 0 !important;
+    align-items: flex-end !important; /* Đẩy xuống đáy */
+    background: rgba(0, 0, 0, 0.75) !important;
   }
   
   #aiResultBox.expanded #aiContent {
     width: 100%;
-    height: 85vh; /* Chiếm 85% chiều cao màn hình */
-    max-height: 85vh;
-    border-radius: 24px 24px 0 0; /* Bo tròn mạnh 2 góc trên */
+    /* Mobile: Chiều cao tự động nhưng max là 85% */
+    height: auto; 
+    max-height: 85vh; 
+    border-radius: 24px 24px 0 0; /* Bo tròn góc trên */
+    padding: 60px 20px 20px 20px;
     margin: 0;
     
-    /* Padding to hơn để tránh bị che bởi tai thỏ hoặc thanh điều hướng */
-    padding: 60px 24px 80px 24px; 
-    
-    /* Hiệu ứng trượt lên mượt mà */
-    transform: translateY(100%);
-    animation: slideUpMobile 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    /* Animation trượt lên đơn giản */
+    animation: slideUpMobile 0.3s ease-out forwards;
   }
-
-  /* 2. Nút Đóng: Làm to ra, dễ bấm hơn */
-  #aiResultBox.expanded .btn-close-ai-expanded {
-    top: 16px;
-    right: 16px;
-    width: 44px; /* To hơn (chuẩn touch target) */
-    height: 44px;
-    background: #f1f5f9;
-    color: #334155;
-    font-size: 18px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-  }
-  #aiResultBox.expanded .btn-close-ai-expanded:active {
-    background: #e2e8f0;
-    transform: scale(0.95);
-  }
-
-  /* 3. Chữ to hơn một chút cho dễ đọc */
-  .ai-response-q { font-size: 17px; line-height: 1.4; }
-  #aiResultBox.expanded #aiContent { font-size: 16px; }
   
-  /* 4. Thanh gạch ngang nhỏ (Handle) báo hiệu có thể kéo xuống */
-  #aiResultBox.expanded #aiContent::before {
-    content: "";
-    position: absolute;
-    top: 12px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 40px;
-    height: 5px;
-    background: #e2e8f0;
-    border-radius: 10px;
+  /* Thanh gạch ngang */
+  #aiResultBox.expanded #aiContent::after {
+    content: ""; position: absolute;
+    top: 12px; left: 50%; transform: translateX(-50%);
+    width: 40px; height: 5px;
+    background: #e2e8f0; border-radius: 10px;
+  }
+  
+  #aiResultBox.expanded .btn-close-ai-expanded {
+    top: 20px; right: 20px;
+    background: #f8fafc; border: 1px solid #e2e8f0;
   }
 }
 
-/* Animation trượt lên cho Mobile */
-@keyframes slideUpMobile {
-  from { transform: translateY(100%); }
-  to { transform: translateY(0); }
+@keyframes slideUpMobile { 
+  from { transform: translateY(100%); } 
+  to { transform: translateY(0); } 
 }
 
 /* Khóa cuộn trang web nền */
 body.ai-open { overflow: hidden; }
-/* Tinh chỉnh nội dung AI cho dễ đọc */
-.ai-response-item { background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); border: 1px solid #e0e7ff; }
-.ai-response-q { font-size: 15px; margin-bottom: 8px; color: #4338ca; border-bottom: 1px solid #e0e7ff; padding-bottom: 6px; }
-.ai-response-tip { background: #fdf4ff; border-left: 4px solid #d946ef; padding: 10px; border-radius: 6px; font-size: 14px; color: #86198f; margin-top: 8px; }
 
-/* --- AI MODEL TAG (CHÚ THÍCH PHIÊN BẢN) --- */
-.ai-model-footer {
-  margin-top: 20px;
-  padding-top: 10px;
-  border-top: 1px dashed #e2e8f0;
-  text-align: right;
-  font-size: 11px;
-  color: #94a3b8;
-  font-family: monospace;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
+
+/* =========================================
+   FIX LỖI TRÀN NGANG (HEADER AI & NỘI DUNG)
+   ========================================= */
+
+/* 1. Bắt buộc nội dung AI phải xuống dòng, không được chọc thủng khung */
+#aiResultBox, #aiContent, .ai-card-content {
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
 
-.ai-model-badge {
-  background: #f1f5f9;
-  color: #475569;
-  padding: 2px 6px;
-  border-radius: 4px;
-  border: 1px solid #cbd5e1;
-  font-weight: 600;
+/* Đảm bảo ảnh hoặc bảng trong AI không bị tràn */
+#aiContent img, #aiContent table {
+  max-width: 100% !important;
+  height: auto !important;
 }
 
-/* --- AI REPORT DASHBOARD (BÁO CÁO KHOA HỌC) --- */
+/* 2. Tối ưu thanh công cụ AI trên Mobile */
+@media (max-width: 600px) {
+  /* Cho phép Header rớt dòng */
+  .ai-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
 
-.ai-dashboard {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-  margin-bottom: 25px;
+  /* Can thiệp vào cái div chứa tiêu đề và select (div con đầu tiên) */
+  .ai-header > div:first-child {
+    flex-wrap: wrap !important;
+    width: 100% !important;
+  }
+
+  /* Tiêu đề "Gia sư AI" */
+  .ai-header h4 {
+    width: 100%;
+    margin-bottom: 5px !important;
+  }
+
+  /* Thanh chọn lịch sử: Full chiều rộng cho dễ bấm */
+  #aiHistorySelect {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 5px 0 !important;
+    flex: none !important; /* Bỏ co giãn để nó full dòng */
+  }
+
+  /* Các nút nhỏ (Phóng to, Giải lại) */
+  .btn-icon-small {
+    flex: 1; /* Chia đều chiều rộng */
+    justify-content: center;
+  }
+
+  /* Nút "Phân tích lỗi sai" to đùng ở dưới cùng */
+  #btnAnalyzeAI {
+    width: 100% !important;
+    margin-top: 5px;
+    justify-content: center;
+  }
 }
 
-.ai-card {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+/* =========================================
+   BEAUTIFY AI CONTENT (GIAO DIỆN THÂN THIỆN)
+   ========================================= */
+
+/* 1. Biến các phần phân tích thành dạng Thẻ (Card) */
+.ai-response-item {
+  background: #ffffff;
+  border: 1px solid #f1f5f9; /* Viền rất nhạt */
+  border-radius: 16px; /* Bo góc mềm mại */
   padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* Đổ bóng nhẹ tạo chiều sâu */
+  transition: transform 0.2s;
 }
 
-.ai-card-title {
-  font-size: 14px;
-  text-transform: uppercase;
-  font-weight: 700;
-  color: #64748b;
-  letter-spacing: 0.5px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+/* 2. Tiêu đề câu hỏi: To, đậm, màu tối dễ đọc */
+.ai-response-q {
+  display: block;
+  font-size: 16px;
+  font-weight: 800;
+  color: #1e293b; /* Màu than chì đậm */
+  line-height: 1.5;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 10px;
 }
 
-.ai-card-content {
+/* 3. Phần giải thích: Màu chữ dịu mắt, khoảng cách dòng thoáng */
+.ai-explanation {
   font-size: 15px;
   color: #334155;
-  line-height: 1.6;
+  line-height: 1.7; /* Giãn dòng rộng ra cho dễ đọc trên đt */
+  margin-bottom: 15px;
+  text-align: justify; /* Căn đều 2 bên cho gọn */
 }
 
-.ai-card-content ul {
-  margin: 0; padding-left: 20px;
+/* 4. Hộp Mẹo ghi nhớ: Làm nổi bật hẳn lên */
+.ai-response-tip {
+  background: #fff1f2; /* Nền hồng phấn nhạt */
+  border: 2px dashed #fbcfe8; /* Viền nét đứt vui mắt */
+  border-radius: 12px;
+  padding: 15px;
+  color: #be123c; /* Chữ đỏ hồng đậm */
+  font-size: 14px;
+  font-weight: 500;
+  font-style: italic;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
-.ai-card-content li { margin-bottom: 6px; }
-
-/* Màu sắc riêng cho từng thẻ */
-.card-weakness { border-left: 4px solid #ef4444; background: #fef2f2; }
-.card-weakness .ai-card-title { color: #b91c1c; }
-
-.card-solution { border-left: 4px solid #3b82f6; background: #eff6ff; }
-.card-solution .ai-card-title { color: #1d4ed8; }
-
-/* Tiêu đề phần chi tiết */
-.ai-section-title {
-  text-align: center;
-  font-size: 18px;
+/* Thêm icon bóng đèn bằng CSS cho sinh động */
+.ai-response-tip::before {
+  content: "💡 Mẹo hay:";
+  font-style: normal;
   font-weight: 800;
-  color: #1e293b;
-  margin: 30px 0 20px 0;
-  position: relative;
-}
-.ai-section-title::before, .ai-section-title::after {
-  content: ""; display: inline-block; width: 40px; height: 2px;
-  background: #e2e8f0; vertical-align: middle; margin: 0 10px;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #9f1239;
+  margin-bottom: 4px;
 }
 
-/* Mobile: Xếp chồng thẻ lên nhau */
+/* 5. Tối ưu riêng cho Dashboard (Phần Điểm yếu/Giải pháp) trên Mobile */
 @media (max-width: 600px) {
-  .ai-dashboard { grid-template-columns: 1fr; }
+  /* Xếp chồng 2 thẻ Dashboard lên nhau thay vì nằm ngang */
+  .ai-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .ai-card {
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+
+  .ai-card-title {
+    font-size: 15px;
+    margin-bottom: 8px;
+  }
+  
+  /* Chỉnh lại padding của popup mobile cho thoáng hơn */
+  #aiResultBox.expanded #aiContent {
+    background: #f8fafc; /* Đổi nền tổng thành màu xám nhạt để các thẻ trắng nổi lên */
+    padding: 60px 15px 30px 15px; /* Padding 2 bên nhỏ lại để thẻ to ra */
+  }
+}
+
+/* =========================================
+   PREVIEW MODE (GIAO DIỆN XEM TRƯỚC - GỌN GÀNG)
+   ========================================= */
+
+/* Khi AI chưa phóng to, nó sẽ là một cái hộp nhỏ gọn */
+#aiResultBox:not(.expanded) {
+  position: relative;
+  max-height: 220px; /* Giới hạn chiều cao, không cho dài ngoằng */
+  overflow: hidden;  /* Cắt bớt phần thừa */
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 15px;
+  margin-top: 15px;
+  cursor: pointer; /* Con trỏ tay chỉ vào để biết là bấm được */
+  transition: all 0.2s ease;
+}
+
+/* Hiệu ứng hover để người dùng biết là bấm vào được */
+#aiResultBox:not(.expanded):hover {
+  border-color: #8b5cf6;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+  transform: translateY(-2px);
+}
+
+/* Lớp phủ mờ dần (Fade Out) ở dưới đáy để báo hiệu "Còn tiếp" */
+#aiResultBox:not(.expanded)::after {
+  content: "";
+  position: absolute;
+  bottom: 0; left: 0; width: 100%;
+  height: 80px; /* Độ cao của phần mờ */
+  background: linear-gradient(to bottom, rgba(255,255,255,0), #ffffff);
+  pointer-events: none;
+}
+
+/* Thêm chữ "Bấm để xem chi tiết" ảo ở giữa phần mờ */
+#aiResultBox:not(.expanded)::before {
+  content: "⛶ Bấm để xem chi tiết";
+  position: absolute;
+  bottom: 10px; left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid #cbd5e1;
+}
+
+/* Khi đang loading thì hiện full để thấy vòng quay */
+#aiResultBox:not(.expanded).is-loading {
+  max-height: none;
+}
+#aiResultBox:not(.expanded).is-loading::after,
+#aiResultBox:not(.expanded).is-loading::before {
+  display: none; /* Ẩn hiệu ứng mờ khi đang loading */
 }
