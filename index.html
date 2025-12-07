@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
-  <title>Thi Trắc Nghiệm Online</title>
+  <title>Thi Trắc Nghiệm Online & AI Tutor</title>
   <link rel="stylesheet" href="style.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -116,16 +116,16 @@
     <div id="historyOverview" class="history-overview" style="display:none;"></div>
 
     <div class="history-tabs">
-      <button class="tab-btn active" onclick="switchHistoryTab('stats')">⚠️ Câu hay sai</button>
-      <button class="tab-btn" onclick="switchHistoryTab('timeline')">📜 Lịch sử</button>
-      <button class="tab-btn" onclick="switchHistoryTab('chart')">📈 Biểu đồ</button>
+      <button class="tab-btn active" onclick="window.switchHistoryTab('stats')">⚠️ Câu hay sai</button>
+      <button class="tab-btn" onclick="window.switchHistoryTab('timeline')">📜 Lịch sử</button>
+      <button class="tab-btn" onclick="window.switchHistoryTab('chart')">📈 Biểu đồ & AI</button>
     </div>
 
     <div class="modal-body">
       <div id="tabStats" class="tab-content active">
         <div id="filterArea" class="stats-filter-wrapper" style="padding:10px 0;">
           <label>Đang xem thống kê của:</label>
-          <select id="statsFilter" class="stats-select" onchange="filterStats()" style="padding:4px;">
+          <select id="statsFilter" class="stats-select" onchange="window.filterStats()" style="padding:4px;">
             <option value="all">-- Tất cả các đề --</option>
           </select>
         </div>
@@ -139,12 +139,41 @@
 
       <div id="tabChart" class="tab-content" style="display:none;">
         
-        <div id="chartStats" class="chart-stats-row" style="display:none;">
-          </div>
+        <div id="chartStats" class="chart-stats-row" style="display:none;"></div>
 
         <div id="chartContainer" class="chart-container">
           <canvas id="scoreChart"></canvas>
         </div>
+
+        <div id="aiSection" class="ai-section">
+            <div class="ai-header" style="flex-wrap: wrap; gap: 10px;">
+                <div style="display:flex; align-items:center; gap:10px; flex: 1;">
+                  <h4 style="margin:0; color:#4f46e5; display:flex; align-items:center; gap:6px; white-space: nowrap;">
+                    🤖 Gia sư AI
+                  </h4>
+                  <select id="aiHistorySelect" class="stats-select" style="max-width: 200px; font-size: 13px;">
+                  </select>
+                  
+                  <button id="btnExpandAI" class="btn-icon-small" title="Phóng to" style="display:none;">⛶</button>
+                  
+                  <button id="btnReAnalyzeAI" class="btn-icon-small" title="Xóa lời giải cũ và chạy lại AI" style="display:none; color: #d97706; border-color: #d97706;">
+                    ↻ Giải lại
+                  </button>
+                </div>
+                
+                <button id="btnAnalyzeAI" class="btn-ai-magic">✨ Phân tích lỗi sai</button>
+            </div>
+            
+            <div id="aiResultBox" style="display:none;">
+                <button id="btnCloseExpanded" class="btn-close-ai-expanded">✕ Đóng</button>
+                
+                <div id="aiLoading" class="ai-loading">
+                    <div class="spinner"></div> Đang suy nghĩ & lưu vào lịch sử...
+                </div>
+                <div id="aiContent"></div>
+            </div>
+        </div>
+
         <div id="chartMessage" style="text-align:center; padding:20px; color:#64748b; display:none;">
           Chưa đủ dữ liệu để vẽ biểu đồ (Cần ít nhất 2 lần thi).
         </div>
@@ -171,6 +200,8 @@
   const db = firebase.firestore();
   const provider = new firebase.auth.GoogleAuthProvider();
 </script>
-<script src="app.js"></script>
+
+<script type="module" src="app.js"></script>
+
 </body>
 </html>

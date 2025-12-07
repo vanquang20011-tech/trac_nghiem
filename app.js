@@ -1,4 +1,15 @@
 // ========================
+// IMPORT GOOGLE GEMINI SDK
+// ========================
+import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
+
+// ========================
+// CẤU HÌNH API KEY
+// ========================
+// HÃY ĐIỀN API KEY CỦA BẠN VÀO ĐÂY (Lấy tại aistudio.google.com)
+const GEMINI_API_KEY = "AIzaSyBK7FLMfkb3Ij1yuxz7uavpPvGnMBAH9_0"; 
+
+// ========================
 // BIẾN TOÀN CỤC
 // ========================
 let questionsData = [];
@@ -8,10 +19,14 @@ let remainingSeconds = 0;
 let examFinished = false;
 let examTotalSeconds = 0;
 let globalHistoryData = [];
-let scoreChart = null; // Biến giữ biểu đồ
+let scoreChart = null; 
 
-const API_KEY = "AIzaSyAry4xCdznJGeWvTi1NtId0q6YgPfZdwrg";
+const API_KEY = "AIzaSyAry4xCdznJGeWvTi1NtId0q6YgPfZdwrg"; // Key cũ cho Drive (nếu cần)
 const DRIVE_FOLDER_ID = ""; 
+
+// ========================
+// CÁC HÀM UI CƠ BẢN
+// ========================
 
 function setHeaderMode(mode) {
   const setup = document.getElementById("setupPanel");
@@ -81,6 +96,10 @@ function shuffleArray(arr) {
   return arr;
 }
 
+// ========================
+// LOGIC ĐỀ THI
+// ========================
+
 async function handleDataLoaded(data, fileName) {
   if (!Array.isArray(data) || data.length === 0) {
     alert("File không hợp lệ hoặc không có câu hỏi.");
@@ -99,7 +118,8 @@ async function handleDataLoaded(data, fileName) {
   await checkCurrentExamHistorySummary(fileName);
 }
 
-function startExamNow() {
+// Expose functions to window (vì dùng type=module)
+window.startExamNow = function() {
   if(!pendingData) {
     alert("Vui lòng chọn file đề trước!");
     return;
@@ -114,13 +134,15 @@ function startExamNow() {
   questionsData = cloned;
   examFinished = false;
 
+  document.getElementById("btnGradeHeader").style.display = "block";
+  document.getElementById("btnGradeNav").style.display = "block";
   document.getElementById("examName").textContent = pendingData.name;
   setHeaderMode('active');
   
   generateQuiz();
   startTimer();
 
-  // Mobile: Thu gọn header khi bắt đầu
+  // Mobile
   if (window.innerWidth <= 850) {
     const header = document.getElementById("mainHeader");
     const toggleBtn = document.getElementById("btnToggleHeaderMobile");
@@ -133,7 +155,7 @@ function startExamNow() {
   checkCurrentExamHistorySummary(pendingData.name);
 }
 
-function loadFileFromLocal() {
+window.loadFileFromLocal = function() {
   const fileInput = document.getElementById("fileInput");
   const file = fileInput.files[0];
   if (!file) return;
@@ -164,7 +186,7 @@ function loadJsonFromDriveFileId(fileId, fileName) {
   });
 }
 
-function chooseExamFromDriveFolder() {
+window.chooseExamFromDriveFolder = function() {
   let folderId = DRIVE_FOLDER_ID;
   if (!folderId) {
     const link = "https://drive.google.com/drive/folders/1yIfmYSkZHBpoJZqBtNfZKWMnxmg46uDX?usp=sharing";
@@ -182,8 +204,8 @@ function chooseExamFromDriveFolder() {
   }).catch(console.error);
 }
 
-function openQuestionNav() { document.getElementById("questionNavOverlay").classList.add("open"); }
-function closeQuestionNav() { document.getElementById("questionNavOverlay").classList.remove("open"); }
+window.openQuestionNav = function() { document.getElementById("questionNavOverlay").classList.add("open"); }
+window.closeQuestionNav = function() { document.getElementById("questionNavOverlay").classList.remove("open"); }
 
 function generateQuiz() {
   const quizDiv = document.getElementById("quiz");
@@ -238,8 +260,15 @@ function generateQuiz() {
 
 function grade(autoSubmit) {
   if(!questionsData.length) return;
+
+  if (examFinished) return;
   examFinished = true;
+  
   clearInterval(timerInterval);
+
+  document.getElementById("btnGradeHeader").style.display = "none";
+  document.getElementById("btnGradeNav").style.display = "none";
+
   let score = 0;
   document.querySelectorAll(".qnav-item").forEach(b => b.className = "qnav-item");
   questionsData.forEach((q, i) => {
@@ -278,7 +307,7 @@ function grade(autoSubmit) {
   saveExamResult(score, total, percent, examName);
 }
 
-function resetExam() {
+window.resetExam = function() {
   if(!confirm("Bạn muốn thoát bài này?")) return;
   clearInterval(timerInterval);
   examFinished = false;
@@ -299,7 +328,9 @@ function resetExam() {
   closeQuestionNav();
 }
 
-// --- FIREBASE ---
+// ========================
+// FIREBASE
+// ========================
 auth.onAuthStateChanged((user) => {
   const btnLogin = document.getElementById("btnLogin");
   const userSection = document.getElementById("userSection");
@@ -332,6 +363,7 @@ async function saveExamResult(score, total, percent, examName) {
     fetchHistoryData(user.uid);
   } catch(e) {}
 }
+
 async function fetchHistoryData(uid) {
   try {
     const snap = await db.collection("users").doc(uid).collection("history").orderBy("timestamp", "desc").limit(100).get();
@@ -340,106 +372,273 @@ async function fetchHistoryData(uid) {
   } catch(e) {}
 }
 
-// --- [CẬP NHẬT] HÀM VẼ BIỂU ĐỒ & THỐNG KÊ CHI TIẾT ---
+// ========================
+// AI GIA SƯ LOGIC
+// ========================
+
+// Hàm hiển thị nội dung AI dựa trên lần làm bài được chọn
+function renderAIContent(attemptData) {
+  const aiResultBox = document.getElementById("aiResultBox");
+  const aiContent = document.getElementById("aiContent");
+  const aiBtn = document.getElementById("btnAnalyzeAI");
+  const expandBtn = document.getElementById("btnExpandAI");
+  const reAnalyzeBtn = document.getElementById("btnReAnalyzeAI"); // Nút mới
+  const loading = document.getElementById("aiLoading");
+
+  // 1. Reset trạng thái chung
+  aiResultBox.style.display = "none";
+  aiContent.innerHTML = "";
+  expandBtn.style.display = "none";
+  reAnalyzeBtn.style.display = "none"; // Ẩn nút giải lại
+  if (loading) loading.style.display = "none"; // Đảm bảo tắt loading
+
+  // 2. Kiểm tra dữ liệu
+  if (attemptData.aiAnalysis) {
+      // ==> TRƯỜNG HỢP 1: ĐÃ CÓ LỜI GIẢI
+      aiResultBox.style.display = "block";
+      aiContent.innerHTML = attemptData.aiAnalysis;
+      
+      expandBtn.style.display = "block"; // Hiện nút phóng to
+      reAnalyzeBtn.style.display = "block"; // Hiện nút Giải lại
+      
+      // Nút chính chuyển thành trạng thái "Đã xong" và không bấm được (để tránh bấm nhầm)
+      aiBtn.textContent = "✅ Đã có lời giải (Đã lưu)";
+      aiBtn.disabled = true; 
+      aiBtn.style.background = "#cbd5e1"; // Màu xám nhạt
+      aiBtn.style.cursor = "default";
+      aiBtn.style.boxShadow = "none";
+
+  } else {
+      // ==> TRƯỜNG HỢP 2: CHƯA CÓ LỜI GIẢI
+      // Reset style nút chính về màu tím đẹp
+      aiBtn.disabled = false;
+      aiBtn.style.background = "linear-gradient(135deg, #8b5cf6, #d946ef)";
+      aiBtn.style.cursor = "pointer";
+      aiBtn.style.boxShadow = "0 4px 10px rgba(139, 92, 246, 0.3)";
+      
+      aiBtn.textContent = "✨ Phân tích lỗi sai";
+      
+      // Kiểm tra nếu đúng 100%
+      const mistakes = (attemptData.details || []).filter(q => !q.s);
+      if (mistakes.length === 0) {
+        aiBtn.textContent = "🎉 Lần này đúng 100%!";
+        aiBtn.disabled = true;
+        aiBtn.style.background = "#10b981"; // Màu xanh lá
+      }
+  }
+}
+
+async function analyzeWithGemini() {
+  const aiBtn = document.getElementById("btnAnalyzeAI");
+  const resultBox = document.getElementById("aiResultBox");
+  const loading = document.getElementById("aiLoading");
+  const content = document.getElementById("aiContent");
+  const expandBtn = document.getElementById("btnExpandAI");
+  const aiSelect = document.getElementById("aiHistorySelect"); // Lấy thanh chọn
+
+  if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("HAY_DIEN")) {
+    alert("Chưa cấu hình API Key!"); return;
+  }
+
+  // 1. XÁC ĐỊNH LẦN LÀM BÀI DỰA VÀO DROPDOWN
+  const selectedId = aiSelect.value;
+  if (!selectedId) { alert("Vui lòng chọn lần làm bài cần phân tích."); return; }
+
+  // Tìm đối tượng bài làm trong mảng globalHistoryData dựa vào ID
+  const targetAttempt = globalHistoryData.find(h => h.id === selectedId);
+  
+  if (!targetAttempt) { alert("Không tìm thấy dữ liệu bài làm này."); return; }
+
+  // 2. LOGIC GỌI AI
+  const mistakes = targetAttempt.details.filter(q => !q.s); 
+  if (mistakes.length === 0) { alert("Lần này bạn đúng hết, không cần AI sửa!"); return; }
+
+  const limitedMistakes = mistakes.slice(0, 3);
+  const mistakesJson = limitedMistakes.map(m => ({
+      question: m.q, userAnswer: m.u || "Bỏ trống", correctAnswer: m.a
+  }));
+
+  resultBox.style.display = "block";
+  loading.style.display = "flex";
+  content.innerHTML = "";
+  aiBtn.disabled = true;
+
+  const candidateModels = [
+    "gemini-2.5-flash", "gemini-flash-latest", "gemini-2.0-flash-lite", "gemini-1.5-flash"
+  ];
+
+  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+  const prompt = `
+  Bạn là gia sư AI vui tính. Học sinh sai các câu này: ${JSON.stringify(mistakesJson)}
+  Giải thích ngắn gọn tại sao sai và cho MẸO GHI NHỚ (thơ/vè).
+  Trả về HTML (không markdown): 
+  <div class="ai-response-item">
+    <span class="ai-response-q">Tiêu đề câu hỏi</span>
+    <div class="ai-explanation">Giải thích ngắn...</div>
+    <div class="ai-response-tip">💡 Mẹo: ...</div>
+  </div>. 
+  Dùng emoji sinh động.
+  `;
+
+  let success = false;
+  let finalHtml = "";
+
+  for (const modelName of candidateModels) {
+    try {
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      finalHtml = response.text().replace(/```html/g, "").replace(/```/g, "");
+      success = true;
+      break; 
+    } catch (error) { console.error(error); }
+  }
+
+  if (success) {
+    content.innerHTML = finalHtml;
+    expandBtn.style.display = "block";
+    aiBtn.textContent = "✅ Đã có lời giải (Đã lưu)";
+    
+    // --- LƯU VÀO ĐÚNG ID CỦA LẦN LÀM BÀI ĐANG CHỌN ---
+    try {
+        const user = auth.currentUser;
+        if (user && targetAttempt.id) {
+            await db.collection("users").doc(user.uid).collection("history").doc(targetAttempt.id).update({
+                aiAnalysis: finalHtml
+            });
+            console.log("Đã lưu AI cho lần làm bài:", targetAttempt.dateStr);
+            
+            // Cập nhật dữ liệu cục bộ để không cần load lại trang
+            targetAttempt.aiAnalysis = finalHtml; 
+        }
+    } catch (e) { console.error("Lỗi lưu AI:", e); }
+    // --------------------------------------------------
+
+  } else {
+    content.innerHTML = `<p style="color:red">Hết lượt hoặc lỗi kết nối.</p>`;
+  }
+
+  loading.style.display = "none";
+  aiBtn.disabled = false;
+}
+
+// Gắn hàm vào nút bấm
+document.getElementById("btnAnalyzeAI").onclick = analyzeWithGemini;
+
+
+// ========================
+// CHART & THỐNG KÊ
+// ========================
+
 function renderChart(examName, data) {
   const chartBox = document.getElementById("chartContainer");
-  const statsBox = document.getElementById("chartStats"); // [MỚI]
+  const statsBox = document.getElementById("chartStats"); 
   const msgBox = document.getElementById("chartMessage");
   const ctx = document.getElementById("scoreChart").getContext('2d');
   
+  // Lọc lịch sử của đề thi này
   let myHist = data.filter(h => h.examName === examName || h.examName.includes(examName));
   
-  // Logic hiển thị thông báo nếu ít dữ liệu
+  // Sắp xếp theo thời gian: Mới nhất -> Cũ nhất
+  myHist.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
+
   if (myHist.length < 2) { 
     chartBox.style.display = "none";
     statsBox.style.display = "none";
     msgBox.style.display = "block";
-    return; 
-  }
-  
-  chartBox.style.display = "block";
-  statsBox.style.display = "flex"; // Hiện box thống kê
-  msgBox.style.display = "none";
+    // Vẫn render dropdown AI kể cả khi chưa đủ dữ liệu vẽ chart
+  } else {
+    chartBox.style.display = "block";
+    statsBox.style.display = "flex";
+    msgBox.style.display = "none";
+    
+    // Logic vẽ chart (Giữ nguyên logic cũ của bạn)
+    const bestAttempt = [...myHist].sort((a, b) => b.score - a.score)[0];
+    const recentAttempt = myHist[0]; // Vì đã sort time desc ở trên
+    
+    statsBox.innerHTML = `
+        <div class="c-stat-box">
+        <div class="c-stat-label">Lần gần nhất</div>
+        <div class="c-stat-val">${recentAttempt.score}/${recentAttempt.total} câu</div>
+        <div class="c-stat-sub">(${recentAttempt.percent}%)</div>
+        </div>
+        <div class="c-stat-box best">
+        <div class="c-stat-label">Cao nhất</div>
+        <div class="c-stat-val">${bestAttempt.score}/${bestAttempt.total} câu</div>
+        <div class="c-stat-sub">(${bestAttempt.percent}%)</div>
+        </div>
+    `;
 
-  // --- 1. TÍNH TOÁN SỐ LIỆU ---
-  
-  // Tìm lần làm TỐT NHẤT (Dựa trên điểm số score, nếu bằng nhau thì lấy mới hơn)
-  // Sắp xếp giảm dần theo điểm
-  const bestAttempt = [...myHist].sort((a, b) => b.score - a.score)[0];
+    // Chuẩn bị dữ liệu cho Chart (đảo ngược lại để cũ -> mới)
+    const chartData = [...myHist].reverse();
+    const labels = chartData.map((_, index) => `Lần ${index + 1}`);
+    const scores = chartData.map(h => h.score); 
+    const totals = chartData.map(h => h.total);
+    const percents = chartData.map(h => h.percent);
+    const maxQuestions = Math.max(...totals);
 
-  // Tìm lần làm GẦN NHẤT (Dựa trên thời gian)
-  // Sắp xếp tăng dần theo thời gian (Cũ -> Mới) để vẽ biểu đồ
-  myHist.sort((a, b) => (a.timestamp && b.timestamp) ? (a.timestamp.seconds - b.timestamp.seconds) : 0);
-  
-  const recentAttempt = myHist[myHist.length - 1]; // Lấy phần tử cuối cùng
-
-  // --- 2. HIỂN THỊ HTML THỐNG KÊ ---
-  statsBox.innerHTML = `
-    <div class="c-stat-box">
-      <div class="c-stat-label">Lần gần nhất</div>
-      <div class="c-stat-val">${recentAttempt.score}/${recentAttempt.total} câu</div>
-      <div class="c-stat-sub">(${recentAttempt.percent}%)</div>
-    </div>
-    <div class="c-stat-box best">
-      <div class="c-stat-label">Cao nhất</div>
-      <div class="c-stat-val">${bestAttempt.score}/${bestAttempt.total} câu</div>
-      <div class="c-stat-sub">(${bestAttempt.percent}%)</div>
-    </div>
-  `;
-
-  // --- 3. VẼ BIỂU ĐỒ (Giữ nguyên logic cũ) ---
-  const labels = myHist.map((_, index) => `Lần ${index + 1}`);
-  const scores = myHist.map(h => h.score); 
-  const totals = myHist.map(h => h.total);
-  const percents = myHist.map(h => h.percent);
-
-  if (scoreChart) { scoreChart.destroy(); }
-
-  scoreChart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Số câu đúng',
-        data: scores,
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        borderWidth: 2,
-        pointBackgroundColor: '#2563eb',
-        pointRadius: 5,
-        pointHoverRadius: 7,
-        tension: 0.3,
-        fill: true
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: function(context) {
-              const idx = context.dataIndex;
-              const sc = context.parsed.y;
-              const tot = totals[idx];
-              const per = percents[idx];
-              return `Đúng: ${sc}/${tot} câu (${per}%)`; 
-            }
-          }
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          grace: '1', // Thêm khoảng trống đỉnh (1 đơn vị)
-          ticks: { stepSize: 1, precision: 0 },
-          grid: { color: '#f1f5f9' }
+    if (scoreChart) { scoreChart.destroy(); }
+    scoreChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+        labels: labels,
+        datasets: [{
+            label: 'Số câu đúng',
+            data: scores,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderWidth: 2,
+            pointBackgroundColor: '#2563eb',
+            pointRadius: 5,
+            tension: 0.3,
+            fill: true
+        }]
         },
-        x: { grid: { display: false } }
-      }
-    }
-  });
+        options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: {
+            beginAtZero: true,
+            suggestedMax: maxQuestions,
+            ticks: { stepSize: 5, precision: 0 },
+            grid: { color: '#f1f5f9' }
+            },
+            x: { grid: { display: false } }
+        }
+        }
+    });
+  }
+
+  // --- LOGIC MỚI: ĐIỀN DỮ LIỆU VÀO DROPDOWN CHỌN LẦN LÀM BÀI ---
+  const aiSelect = document.getElementById("aiHistorySelect");
+  
+  if (myHist.length > 0) {
+      let optionsHtml = "";
+      myHist.forEach((attempt, index) => {
+          // index 0 là mới nhất
+          const time = attempt.dateStr || "N/A";
+          // Label: "Lần làm (Ngày) - Điểm"
+          optionsHtml += `<option value="${attempt.id}">📅 ${time} (Điểm: ${attempt.score}/${attempt.total})</option>`;
+      });
+      aiSelect.innerHTML = optionsHtml;
+      
+      // Mặc định chọn lần mới nhất (option đầu tiên)
+      aiSelect.selectedIndex = 0;
+      renderAIContent(myHist[0]); // Hiển thị AI cho lần đầu tiên
+
+      // Sự kiện khi người dùng đổi lựa chọn
+      aiSelect.onchange = function() {
+          const selectedId = this.value;
+          const selectedAttempt = myHist.find(h => h.id === selectedId);
+          if (selectedAttempt) {
+              renderAIContent(selectedAttempt);
+          }
+      };
+  } else {
+      aiSelect.innerHTML = "<option>Chưa có dữ liệu</option>";
+  }
 }
 
 function renderOverview(examName, data) {
@@ -460,23 +659,19 @@ function renderOverview(examName, data) {
 }
 function getMaxColor(p) { return p >= 90 ? '#16a34a' : (p >= 50 ? '#d97706' : '#dc2626'); }
 
-async function showHistory() {
+window.showHistory = async function() {
   const user = auth.currentUser;
   if (!user) { alert("Vui lòng đăng nhập."); return; }
   const modal = document.getElementById("historyModal");
   modal.style.display = "flex";
   
   document.getElementById("statsList").innerHTML = "<p style='text-align:center; padding:20px'>⏳ Đang tải...</p>";
+  document.getElementById("aiResultBox").style.display = "none"; // Ẩn AI cũ nếu có
   
   document.getElementById("historyOverview").style.display = "none";
   document.getElementById("chartContainer").style.display = "none";
 
-  // Reset tab active
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector('.tab-btn[onclick="switchHistoryTab(\'stats\')"]').classList.add('active');
-  document.getElementById("tabStats").style.display = "block";
-  document.getElementById("tabTimeline").style.display = "none";
-  document.getElementById("tabChart").style.display = "none";
+  window.switchHistoryTab('stats'); // Default tab
 
   let targetExamName = null;
   const isExamActive = document.getElementById("statusPanel").style.display !== "none";
@@ -502,9 +697,9 @@ async function showHistory() {
   }
 }
 
-function switchHistoryTab(tab) {
+window.switchHistoryTab = function(tab) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelector(`.tab-btn[onclick="switchHistoryTab('${tab}')"]`).classList.add('active');
+  document.querySelector(`.tab-btn[onclick="window.switchHistoryTab('${tab}')"]`).classList.add('active');
   document.getElementById('tabStats').style.display = (tab === 'stats') ? 'block' : 'none';
   document.getElementById('tabTimeline').style.display = (tab === 'timeline') ? 'block' : 'none';
   document.getElementById('tabChart').style.display = (tab === 'chart') ? 'block' : 'none';
@@ -518,11 +713,12 @@ function initStatsFilter() {
   names.forEach(n => html += `<option value="${n}">${n}</option>`);
   sel.innerHTML = html;
 }
-function filterStats() {
+window.filterStats = function() {
   const val = document.getElementById("statsFilter").value;
   renderStats(val);
   renderTimeline(val);
 }
+
 function renderStats(filterName) {
   const list = document.getElementById("statsList");
   let data = globalHistoryData;
@@ -561,7 +757,7 @@ function renderTimeline(filterName) {
         return `<div class="hist-q-item ${isRight ? 'hist-correct' : 'hist-wrong'}"><div class="hist-q-text"><span style="font-weight:bold; color:${isRight?'#16a34a':'#dc2626'}">Câu ${idx + 1}:</span> ${q.q}</div><div class="hist-user-ans">${isRight ? '✅' : '❌'} Bạn chọn: <b>${q.u || '(Bỏ trống)'}</b></div>${!isRight ? `<div class="hist-correct-ans">👉 Đáp án đúng: <b>${q.a}</b></div>` : ''}</div>`;
       }).join('');
     }
-    html += `<div class="history-card-wrapper" id="card-${d.id}"><div class="history-summary" onclick="toggleHistoryDetail('${d.id}')"><div class="hist-left"><div class="hist-name">${d.examName}</div><div class="hist-date">${d.dateStr}</div></div><div class="hist-right"><div style="text-align:right; margin-right:8px;"><div class="hist-score" style="color:${scoreColor}">${d.score}/${d.total}</div><div class="hist-percent" style="background:${scoreColor}">${d.percent}%</div></div><div class="hist-arrow">▼</div></div></div><div id="detail-${d.id}" class="history-details-box" style="display:none;">${detailsHtml || '<p style="padding:10px; text-align:center;">Không có dữ liệu chi tiết.</p>'}</div></div>`;
+    html += `<div class="history-card-wrapper" id="card-${d.id}"><div class="history-summary" onclick="window.toggleHistoryDetail('${d.id}')"><div class="hist-left"><div class="hist-name">${d.examName}</div><div class="hist-date">${d.dateStr}</div></div><div class="hist-right"><div style="text-align:right; margin-right:8px;"><div class="hist-score" style="color:${scoreColor}">${d.score}/${d.total}</div><div class="hist-percent" style="background:${scoreColor}">${d.percent}%</div></div><div class="hist-arrow">▼</div></div></div><div id="detail-${d.id}" class="history-details-box" style="display:none;">${detailsHtml || '<p style="padding:10px; text-align:center;">Không có dữ liệu chi tiết.</p>'}</div></div>`;
   });
   list.innerHTML = html;
 }
@@ -587,18 +783,21 @@ async function checkCurrentExamHistorySummary(examName) {
     const maxScore = Math.max(...myHist.map(h => h.percent));
     const count = myHist.length;
     summaryEl.style.display = 'flex';
-    summaryEl.innerHTML = `<div><span style="font-size:18px;">🎓</span> Bạn đã làm đề <b>"${examName}"</b> tổng cộng <b>${count}</b> lần. Thành tích tốt nhất: <b style="color:${getMaxColor(maxScore)}">${maxScore}%</b>.</div><u onclick="showHistory()" style="cursor:pointer; font-weight:600; margin-left:15px; white-space:nowrap;">Xem chi tiết</u>`;
+    summaryEl.innerHTML = `<div><span style="font-size:18px;">🎓</span> Bạn đã làm đề <b>"${examName}"</b> tổng cộng <b>${count}</b> lần. Thành tích tốt nhất: <b style="color:${getMaxColor(maxScore)}">${maxScore}%</b>.</div><u onclick="window.showHistory()" style="cursor:pointer; font-weight:600; margin-left:15px; white-space:nowrap;">Xem chi tiết</u>`;
   }
 }
 
 // EVENTS
 document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("fileInput").onchange = loadFileFromLocal;
-  document.getElementById("btnSelectDrive").onclick = chooseExamFromDriveFolder;
-  document.getElementById("btnStart").onclick = startExamNow;
-  document.getElementById("btnReset").onclick = resetExam;
+  document.getElementById("fileInput").onchange = window.loadFileFromLocal;
+  document.getElementById("btnSelectDrive").onclick = window.chooseExamFromDriveFolder;
+  document.getElementById("btnStart").onclick = window.startExamNow;
+  document.getElementById("btnReset").onclick = window.resetExam;
 
   const handleSubmission = () => {
+
+    if (examFinished) return;
+
     if (!questionsData || questionsData.length === 0) return;
     const answeredCount = document.querySelectorAll('input[type="radio"]:checked').length;
     const total = questionsData.length;
@@ -618,12 +817,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("btnGradeHeader").onclick = handleSubmission;
   document.getElementById("btnGradeNav").onclick = handleSubmission;
-  document.getElementById("btnViewHistory").onclick = showHistory;
+  document.getElementById("btnViewHistory").onclick = window.showHistory;
   document.getElementById("btnCloseHistory").onclick = () => document.getElementById("historyModal").style.display = "none";
-  document.getElementById("btnToggleNavMobile").onclick = openQuestionNav;
-  document.getElementById("questionNavCloseBtn").onclick = closeQuestionNav;
-  document.getElementById("questionNavOverlay").onclick = (e) => { if(e.target.id === "questionNavOverlay") closeQuestionNav(); };
-  document.getElementById("btnToggleNavMobileInHeader").onclick = openQuestionNav;  
+  document.getElementById("btnToggleNavMobile").onclick = window.openQuestionNav;
+  document.getElementById("questionNavCloseBtn").onclick = window.closeQuestionNav;
+  document.getElementById("questionNavOverlay").onclick = (e) => { if(e.target.id === "questionNavOverlay") window.closeQuestionNav(); };
+  document.getElementById("btnToggleNavMobileInHeader").onclick = window.openQuestionNav;  
   
   const header = document.getElementById("mainHeader");
   const toggleBtn = document.getElementById("btnToggleHeaderMobile");
@@ -636,8 +835,88 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
   document.getElementById("btnToggleNavMobile").onclick = () => {
-    openQuestionNav();
+    window.openQuestionNav();
     if (window.innerWidth <= 850) { header.classList.add("header-hidden"); toggleBtn.textContent = "▼"; }
   };
   updateFileStatus("", false); 
+
+  // --- SỰ KIỆN PHÓNG TO / THU NHỎ (FIX GIAO DIỆN & LOADING) ---
+  const aiBox = document.getElementById("aiResultBox");
+  const expandBtn = document.getElementById("btnExpandAI");
+  const closeExpandedBtn = document.getElementById("btnCloseExpanded");
+  const aiSectionParent = document.getElementById("aiSection");
+
+  // Nút đóng mới: Sửa lại text thành dấu X cho đẹp (vì CSS đã làm tròn nút)
+  if(closeExpandedBtn) closeExpandedBtn.textContent = "✕";
+
+  const toggleExpand = () => {
+    const isExpanded = aiBox.classList.contains("expanded");
+    
+    if (!isExpanded) {
+        // ==> BẬT PHÓNG TO
+        // 1. Dịch chuyển box ra body
+        document.body.appendChild(aiBox);
+        
+        // 2. Thêm class style
+        aiBox.classList.add("expanded");
+        document.body.classList.add("ai-open");
+        
+        // 3. Ẩn nút phóng to nhỏ
+        if(expandBtn) expandBtn.style.display = "none";
+        
+        // 4. Kiểm tra xem có đang loading không để thêm class xử lý giao diện
+        const loadingDiv = document.getElementById("aiLoading");
+        if (loadingDiv && loadingDiv.style.display !== "none") {
+            aiBox.classList.add("is-loading");
+        } else {
+            aiBox.classList.remove("is-loading");
+        }
+
+    } else {
+        // ==> TẮT PHÓNG TO
+        aiBox.classList.remove("expanded");
+        aiBox.classList.remove("is-loading");
+        document.body.classList.remove("ai-open");
+        
+        // Đưa về chỗ cũ
+        aiSectionParent.appendChild(aiBox);
+        
+        // Hiện lại nút nhỏ
+        if(expandBtn) expandBtn.style.display = "block";
+        expandBtn.textContent = "⛶";
+    }
+  };
+
+  if(expandBtn) expandBtn.onclick = toggleExpand;
+  if(closeExpandedBtn) closeExpandedBtn.onclick = toggleExpand;
+  
+  // Phím ESC để thoát
+  document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && aiBox && aiBox.classList.contains("expanded")) {
+          toggleExpand();
+      }
+  });
+
+  // Bấm ra ngoài vùng trắng để đóng
+  if(aiBox) {
+      aiBox.onclick = (e) => {
+          // Nếu đang expanded và bấm vào vùng nền tối (aiBox), chứ không phải bấm vào nội dung (aiContent)
+          if (aiBox.classList.contains("expanded") && e.target === aiBox) {
+              toggleExpand();
+          }
+      };
+  }
+
+  // Sự kiện nút Phân tích chính (Chạy lần đầu)
+  document.getElementById("btnAnalyzeAI").onclick = () => analyzeWithGemini(false);
+
+  // Sự kiện nút Giải lại (Chạy lại ép buộc)
+  const btnRe = document.getElementById("btnReAnalyzeAI");
+  if (btnRe) {
+      btnRe.onclick = () => {
+          if(confirm("Bạn có chắc muốn chạy lại AI không?\n(Sẽ tốn thêm 1 lượt dùng trong ngày)")) {
+              analyzeWithGemini(true); // Truyền true để ép chạy lại
+          }
+      };
+  }
 });
