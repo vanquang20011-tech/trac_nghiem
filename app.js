@@ -8,7 +8,7 @@ import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 // ========================
 // HÃY ĐIỀN API KEY CỦA BẠN VÀO ĐÂY (Lấy tại aistudio.google.com)
 const API_KEYS = [
-    "AIzaSyBK7FLMfkb3Ij1yuxz7uavpPvGnMBAH9_0",  
+    "AIzaSyCaVFnFNmn4ZPOM7mt6Rbpop84Gs1uYKGs",  
     "AIzaSyA9drRXuLhODSaCJbq7E80arJRuDS0di0U",                 // Điền thêm Key phụ vào đây
     "AIzaSyBB4fEmx_62N-5QEDptlXDXaBDlESRE1ck",
     "AIzaSyAXx9RY0EuNmbkpgZYH_jsgqR3WK6022tQ",
@@ -990,4 +990,5 @@ document.addEventListener("DOMContentLoaded", () => {
           }
       };
   }
+
 });
