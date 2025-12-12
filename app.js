@@ -4,28 +4,116 @@
 import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
 // ========================
-// CẤU HÌNH API KEY
+// QUẢN LÝ API KEY (ĐỒNG BỘ ĐA THIẾT BỊ QUA FIREBASE)
 // ========================
-// HÃY ĐIỀN API KEY CỦA BẠN VÀO ĐÂY (Lấy tại aistudio.google.com)
-const API_KEYS = [
-    "AIzaSyCaVFnFNmn4ZPOM7mt6Rbpop84Gs1uYKGs",  
-    "AIzaSyDsF3KgKf_fzWFgg_ai9uZBKpHyY6sP7QU",                 // Điền thêm Key phụ vào đây
-    "AIzaSyBj1xq2dbryc6c8AQ-qdmS1ROT7CecBW_c",
-    "AIzaSyAjavflKO6ZAp0ucRlpQkXN_bop6T29RE8",
-    "AIzaSyDf3_2vyBZQLphQQLuoeR4vquuLkmI42Co"
-];
+let API_KEYS = [];
+let currentKeyIndex = 0;
 
-let currentKeyIndex = 0; // Bắt đầu dùng từ Key đầu tiên
+// 1. Hàm lưu Key (Vừa lưu máy này, vừa lưu lên Cloud)
+async function saveKeysToStorage(keysArray) {
+    const cleanKeys = keysArray.map(k => k.trim()).filter(k => k.length > 10);
+    
+    if (cleanKeys.length > 0) {
+        API_KEYS = cleanKeys;
+        
+        // A. Lưu vào máy hiện tại (để dùng nhanh)
+        localStorage.setItem("gemini_api_keys", JSON.stringify(cleanKeys));
+        
+        // B. Lưu lên Cloud (Firebase) để đồng bộ sang máy khác
+        const user = auth.currentUser;
+        if (user) {
+            try {
+                await db.collection("users").doc(user.uid).set({
+                    apiKeys: cleanKeys
+                }, { merge: true }); // merge: true để không mất lịch sử thi
+                alert(`✅ Đã lưu ${cleanKeys.length} Key vào tài khoản!\nGiờ bạn có thể dùng trên mọi thiết bị.`);
+            } catch (e) {
+                console.error("Lỗi lưu Cloud:", e);
+                alert("⚠️ Đã lưu vào máy này, nhưng lỗi lưu lên Cloud (kiểm tra mạng).");
+            }
+        } else {
+            alert(`✅ Đã lưu ${cleanKeys.length} Key vào trình duyệt này.\n(Hãy đăng nhập để đồng bộ sang điện thoại!)`);
+        }
+        
+        // Reset index để dùng key mới ngay
+        currentKeyIndex = 0;
+        
+    } else {
+        alert("❌ Danh sách Key không hợp lệ.");
+    }
+}
 
-// Hàm xoay vòng Key
-function rotateKey() {
-    currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
-    console.log(`⚠️ Đổi sang Key số ${currentKeyIndex + 1}`);
+// 2. Hàm tải Key từ Cloud về (Chạy khi đăng nhập)
+async function syncKeysFromCloud(user) {
+    if (!user) return;
+    
+    try {
+        const doc = await db.collection("users").doc(user.uid).get();
+        if (doc.exists && doc.data().apiKeys) {
+            const cloudKeys = doc.data().apiKeys;
+            if (Array.isArray(cloudKeys) && cloudKeys.length > 0) {
+                API_KEYS = cloudKeys;
+                // Cập nhật luôn vào localStorage cho lần sau
+                localStorage.setItem("gemini_api_keys", JSON.stringify(cloudKeys));
+                console.log(`☁️ Đã đồng bộ ${API_KEYS.length} Key từ tài khoản của bạn.`);
+            }
+        }
+    } catch (e) {
+        console.error("Lỗi đồng bộ Key:", e);
+    }
+}
+
+// 3. Hàm tải Key từ Local (Chạy khi mới mở web)
+function loadKeysFromLocal() {
+    const stored = localStorage.getItem("gemini_api_keys");
+    if (stored) {
+        try {
+            API_KEYS = JSON.parse(stored);
+            console.log(`📂 Đã tải ${API_KEYS.length} Key từ máy.`);
+        } catch(e) {}
+    }
+}
+
+// 4. Popup nhập Key
+function promptForKeys() {
+    const currentKeysStr = API_KEYS.join("\n");
+    const user = auth.currentUser;
+    let msg = "🛠️ CẤU HÌNH API KEY (Multi-Device)\n\n";
+    
+    if (user) {
+        msg += `👤 Đang đăng nhập: ${user.displayName}\n(Key bạn nhập sẽ được lưu vào tài khoản này)\n\n`;
+    } else {
+        msg += `⚠️ Bạn CHƯA đăng nhập.\nKey chỉ được lưu trên máy này thôi.\nHãy đăng nhập để đồng bộ sang điện thoại!\n\n`;
+    }
+    
+    msg += "Dán danh sách Key vào đây (Mỗi key một dòng):";
+
+    const input = prompt(msg, currentKeysStr);
+
+    if (input !== null) {
+        // Tách chuỗi thành mảng (chấp nhận xuống dòng hoặc dấu phẩy)
+        const newKeys = input.split(/[\n,]+/).map(k => k.trim()).filter(k => k);
+        saveKeysToStorage(newKeys);
+    }
 }
 
 function getCurrentKey() {
+    if (!API_KEYS || API_KEYS.length === 0) {
+        // Nếu chưa có key thì chưa làm gì cả, đợi hàm gọi xử lý
+        return null;
+    }
     return API_KEYS[currentKeyIndex];
 }
+
+function rotateKey() {
+    if (API_KEYS.length > 0) {
+        currentKeyIndex = (currentKeyIndex + 1) % API_KEYS.length;
+        console.log(`⚠️ Đổi sang Key số ${currentKeyIndex + 1}`);
+    }
+}
+
+// Khởi động: Tải từ local trước cho nhanh
+loadKeysFromLocal();
 
 
 // ========================
@@ -354,10 +442,16 @@ auth.onAuthStateChanged((user) => {
   const btnLogin = document.getElementById("btnLogin");
   const userSection = document.getElementById("userSection");
   const avatar = document.getElementById("userAvatar");
+  
   if (user) {
     btnLogin.style.display = "none";
     userSection.style.display = "flex";
     avatar.src = user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName}`;
+    
+    // --- MỚI: TỰ ĐỘNG TẢI KEY TỪ CLOUD VỀ ---
+    syncKeysFromCloud(user);
+    // ----------------------------------------
+    
   } else {
     btnLogin.style.display = "block";
     userSection.style.display = "none";
@@ -404,17 +498,15 @@ function renderAIContent(attemptData) {
   const reAnalyzeBtn = document.getElementById("btnReAnalyzeAI");
   const loading = document.getElementById("aiLoading");
 
-  // --- FIX LỖI LOADING TẠI ĐÂY ---
+  // FIX LỖI LOADING
   aiResultBox.style.display = "none";
-  aiResultBox.classList.remove("is-loading"); // <--- QUAN TRỌNG: Xóa class gây lỗi
+  aiResultBox.classList.remove("is-loading"); 
   if (loading) loading.style.display = "none";
-  // -------------------------------
 
   aiContent.innerHTML = "";
   expandBtn.style.display = "none";
   reAnalyzeBtn.style.display = "none";
   
-  // ... (Phần còn lại của hàm giữ nguyên) ...
   if (attemptData.aiAnalysis) {
       aiResultBox.style.display = "block";
       aiContent.innerHTML = attemptData.aiAnalysis;
@@ -442,19 +534,20 @@ function renderAIContent(attemptData) {
 }
 
 // ========================
-// HÀM GỌI AI (PHIÊN BẢN KHOA HỌC & TOÀN DIỆN)
+// HÀM GỌI AI (PHIÊN BẢN MỚI NHẤT)
 // ========================
 async function analyzeWithGemini(forceUpdate = false) {
   const aiBtn = document.getElementById("btnAnalyzeAI");
   const resultBox = document.getElementById("aiResultBox");
   const loading = document.getElementById("aiLoading");
   const content = document.getElementById("aiContent");
-  const expandBtn = document.getElementById("btnExpandAI");
   const reAnalyzeBtn = document.getElementById("btnReAnalyzeAI");
   const aiSelect = document.getElementById("aiHistorySelect");
 
+  // KIỂM TRA KEY: Nếu chưa có key thì bắt nhập
   if (!API_KEYS || API_KEYS.length === 0) {
-    alert("Chưa cấu hình API Key!"); return;
+    promptForKeys();
+    if (!API_KEYS || API_KEYS.length === 0) return; // Nhập xong vẫn rỗng thì thôi
   }
 
   // 1. Lấy ID từ dropdown
@@ -469,13 +562,13 @@ async function analyzeWithGemini(forceUpdate = false) {
       return;
   }
 
-  // 3. Lấy lỗi sai (Lấy nhiều hơn để phân tích xu hướng)
+  // 3. Lấy lỗi sai
   const mistakes = targetAttempt.details.filter(q => !q.s); 
   if (mistakes.length === 0) {
       alert("Bạn đúng 100%! Không có gì để phân tích."); return;
   }
 
-  // Gửi tối đa 8 câu sai để AI nhìn thấy "bức tranh toàn cảnh"
+  // Gửi tối đa 8 câu sai
   const limitedMistakes = mistakes.slice(0, 8);
   const mistakesJson = limitedMistakes.map(m => ({
       question: m.q, userAnswer: m.u || "Bỏ trống", correctAnswer: m.a
@@ -493,7 +586,6 @@ async function analyzeWithGemini(forceUpdate = false) {
   // --- LOGIC KEY POOL ---
   let success = false;
   let finalHtml = "";
-  // Ưu tiên model thông minh nhất để phân tích logic (2.5 hoặc 2.0)
   const candidateModels = ["gemini-2.5-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash"];
 
   for (let k = 0; k < API_KEYS.length; k++) {
@@ -507,47 +599,35 @@ async function analyzeWithGemini(forceUpdate = false) {
               try {
                   const model = genAI.getGenerativeModel({ model: modelName });
                   
-                  // --- PROMPT KHOA HỌC ---
                   const prompt = `
-                  Bạn là một Chuyên gia Phân tích Giáo dục và Gia sư AI cao cấp.
+                  Bạn là một Chuyên gia Phân tích Giáo dục.
                   Học sinh vừa làm bài thi và sai các câu dưới đây (JSON):
                   ${JSON.stringify(mistakesJson)}
 
-                  Nhiệm vụ của bạn là tạo một BÁO CÁO PHÂN TÍCH TOÀN DIỆN dưới dạng HTML (không markdown):
-
-                  1. **PHẦN 1: CHẨN ĐOÁN & GIẢI PHÁP (Dashboard)**
-                     - Phân tích xu hướng sai: Học sinh đang yếu ở mảng nào? (Ví dụ: Hay sai ngày tháng lịch sử, chưa nắm rõ định nghĩa, hay bị bẫy câu chữ, hay yếu phần tính toán...).
-                     - Đưa ra giải pháp cụ thể để cải thiện (Ví dụ: Kẻ bảng so sánh, học lại chương nào, chú ý từ khóa gì).
-                     - Trả về cấu trúc HTML:
+                  Nhiệm vụ: Tạo BÁO CÁO PHÂN TÍCH TOÀN DIỆN (HTML không markdown):
+                  1. **Dashboard (Tổng quan):**
                      <div class="ai-dashboard">
                         <div class="ai-card card-weakness">
                             <div class="ai-card-title">📉 Điểm yếu cốt lõi</div>
-                            <div class="ai-card-content">...Nội dung phân tích...</div>
+                            <div class="ai-card-content">...Phân tích...</div>
                         </div>
                         <div class="ai-card card-solution">
                             <div class="ai-card-title">💊 Phác đồ cải thiện</div>
-                            <div class="ai-card-content">...Lời khuyên cụ thể...</div>
+                            <div class="ai-card-content">...Giải pháp...</div>
                         </div>
                      </div>
-
-                  2. **PHẦN 2: CHI TIẾT SỬA LỖI**
-                     - Giải thích ngắn gọn tại sao sai.
-                     - Đưa ra MẸO GHI NHỚ (thơ, vè, liên tưởng) cho từng câu.
-                     - Cấu trúc HTML cho mỗi câu:
+                  2. **Chi tiết từng câu:**
                      <div class="ai-response-item">
                         <span class="ai-response-q">Câu hỏi...</span>
                         <div class="ai-explanation">Giải thích...</div>
                         <div class="ai-response-tip">💡 Mẹo: ...</div>
                      </div>
-
-                  Yêu cầu: Giọng văn chuyên nghiệp nhưng thân thiện, khích lệ. Dùng emoji phù hợp.
                   `;
 
                   const result = await model.generateContent(prompt);
                   let rawHtml = result.response.text().replace(/```html/g, "").replace(/```/g, "");
                   
                   if(rawHtml.length > 50) {
-                      // Thêm footer phiên bản
                       finalHtml = rawHtml + `
                         <div class="ai-model-footer">
                             ⚡ Phân tích bởi: <span class="ai-model-badge">${modelName}</span>
@@ -599,25 +679,21 @@ function renderChart(examName, data) {
   const msgBox = document.getElementById("chartMessage");
   const ctx = document.getElementById("scoreChart").getContext('2d');
   
-  // Lọc lịch sử của đề thi này
   let myHist = data.filter(h => h.examName === examName || h.examName.includes(examName));
   
-  // Sắp xếp theo thời gian: Mới nhất -> Cũ nhất
   myHist.sort((a, b) => b.timestamp.seconds - a.timestamp.seconds);
 
   if (myHist.length < 2) { 
     chartBox.style.display = "none";
     statsBox.style.display = "none";
     msgBox.style.display = "block";
-    // Vẫn render dropdown AI kể cả khi chưa đủ dữ liệu vẽ chart
   } else {
     chartBox.style.display = "block";
     statsBox.style.display = "flex";
     msgBox.style.display = "none";
     
-    // Logic vẽ chart (Giữ nguyên logic cũ của bạn)
     const bestAttempt = [...myHist].sort((a, b) => b.score - a.score)[0];
-    const recentAttempt = myHist[0]; // Vì đã sort time desc ở trên
+    const recentAttempt = myHist[0]; 
     
     statsBox.innerHTML = `
         <div class="c-stat-box">
@@ -632,12 +708,10 @@ function renderChart(examName, data) {
         </div>
     `;
 
-    // Chuẩn bị dữ liệu cho Chart (đảo ngược lại để cũ -> mới)
     const chartData = [...myHist].reverse();
     const labels = chartData.map((_, index) => `Lần ${index + 1}`);
     const scores = chartData.map(h => h.score); 
     const totals = chartData.map(h => h.total);
-    const percents = chartData.map(h => h.percent);
     const maxQuestions = Math.max(...totals);
 
     if (scoreChart) { scoreChart.destroy(); }
@@ -674,24 +748,19 @@ function renderChart(examName, data) {
     });
   }
 
-  // --- LOGIC MỚI: ĐIỀN DỮ LIỆU VÀO DROPDOWN CHỌN LẦN LÀM BÀI ---
+  // LOGIC DROPDOWN CHỌN LẦN LÀM BÀI
   const aiSelect = document.getElementById("aiHistorySelect");
   
   if (myHist.length > 0) {
       let optionsHtml = "";
       myHist.forEach((attempt, index) => {
-          // index 0 là mới nhất
           const time = attempt.dateStr || "N/A";
-          // Label: "Lần làm (Ngày) - Điểm"
           optionsHtml += `<option value="${attempt.id}">📅 ${time} (Điểm: ${attempt.score}/${attempt.total})</option>`;
       });
       aiSelect.innerHTML = optionsHtml;
-      
-      // Mặc định chọn lần mới nhất (option đầu tiên)
       aiSelect.selectedIndex = 0;
-      renderAIContent(myHist[0]); // Hiển thị AI cho lần đầu tiên
+      renderAIContent(myHist[0]); 
 
-      // Sự kiện khi người dùng đổi lựa chọn
       aiSelect.onchange = function() {
           const selectedId = this.value;
           const selectedAttempt = myHist.find(h => h.id === selectedId);
@@ -729,12 +798,12 @@ window.showHistory = async function() {
   modal.style.display = "flex";
   
   document.getElementById("statsList").innerHTML = "<p style='text-align:center; padding:20px'>⏳ Đang tải...</p>";
-  document.getElementById("aiResultBox").style.display = "none"; // Ẩn AI cũ nếu có
+  document.getElementById("aiResultBox").style.display = "none"; 
   
   document.getElementById("historyOverview").style.display = "none";
   document.getElementById("chartContainer").style.display = "none";
 
-  window.switchHistoryTab('stats'); // Default tab
+  window.switchHistoryTab('stats'); 
 
   let targetExamName = null;
   const isExamActive = document.getElementById("statusPanel").style.display !== "none";
@@ -990,6 +1059,18 @@ document.addEventListener("DOMContentLoaded", () => {
           }
       };
   }
-
+  
+  // SỰ KIỆN NÚT CÀI ĐẶT KEY
+  const btnSetupKey = document.createElement("button");
+  btnSetupKey.className = "btn-icon-small";
+  btnSetupKey.textContent = "🔑";
+  btnSetupKey.title = "Cài đặt API Key";
+  btnSetupKey.style.marginRight = "5px";
+  btnSetupKey.onclick = promptForKeys;
+  
+  // Chèn nút Key vào header AI (Bên cạnh tiêu đề)
+  const aiHeaderTitle = document.querySelector(".ai-header h4");
+  if(aiHeaderTitle) {
+      aiHeaderTitle.appendChild(btnSetupKey);
+  }
 });
-
