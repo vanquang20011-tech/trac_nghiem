@@ -1,0 +1,386 @@
+/* =========================================
+   DARK MODE SYSTEM (ANTI-GLARE COLOR FIX)
+   ========================================= */
+
+body.dark-mode {
+  --bg-body: #0f172a; /* Nền trang (Slate-950) */
+  --bg-card: #1e293b; /* Nền thẻ (Slate-800) */
+  --bg-input: #020617; /* Nền input (Slate-950) */
+
+  /* --- ĐÃ ĐỔI: Màu chữ chính sang Xám Bạc (Slate-300) cho dịu mắt --- */
+  --text-main: #cbd5e1;
+
+  --text-muted: #94a3b8; /* Chữ phụ (Slate-400) */
+  --border: #334155; /* Viền (Slate-700) */
+  --highlight: #3b82f6; /* Màu xanh chủ đạo */
+}
+
+/* 1. NỀN TẢNG & TEXT CƠ BẢN */
+body.dark-mode {
+  background-color: var(--bg-body) !important;
+  color: var(--text-main) !important;
+}
+
+/* 2. CÁC KHỐI CHÍNH (CARD, HEADER, MODAL) */
+body.dark-mode .exam-header,
+body.dark-mode .question-card,
+body.dark-mode .question-nav,
+body.dark-mode .setup-panel,
+body.dark-mode .status-panel,
+body.dark-mode .modal-content,
+body.dark-mode .drive-modal-box,
+body.dark-mode .drive-header,
+body.dark-mode .welcome-state,
+body.dark-mode .ai-section,
+body.dark-mode .ai-card,
+body.dark-mode .chart-stats-row,
+body.dark-mode .study-sidebar,
+body.dark-mode .study-card {
+  background-color: var(--bg-card) !important;
+  color: var(--text-main) !important;
+  border-color: var(--border) !important;
+  box-shadow: none !important;
+}
+
+/* 3. INPUT, SELECT, BUTTON */
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea,
+body.dark-mode .time-wrapper,
+body.dark-mode .btn-upload,
+body.dark-mode .btn-icon-drive,
+body.dark-mode .btn-tool,
+body.dark-mode .qnav-item,
+body.dark-mode .btn-drive-nav,
+body.dark-mode .btn-outline {
+  background-color: var(--bg-input) !important;
+  color: #cbd5e1 !important; /* Đổi màu chữ input sang xám bạc */
+  border-color: var(--border) !important;
+}
+
+/* 4. KHÔI PHỤC HIGHLIGHT & MÀU SẮC TRẠNG THÁI */
+
+/* --- Trạng thái THÀNH CÔNG (Xanh lá) --- */
+body.dark-mode .history-summary-alert {
+  background-color: rgba(6, 78, 59, 0.4) !important;
+  border-color: #065f46 !important;
+  color: #86efac !important; /* Giữ xanh sáng để nổi bật */
+}
+body.dark-mode .file-status.ready {
+  background-color: rgba(6, 78, 59, 0.4) !important;
+  color: #86efac !important;
+  border-color: #065f46 !important;
+}
+body.dark-mode .c-stat-box.best {
+  background-color: rgba(6, 78, 59, 0.3) !important;
+  border-color: #065f46 !important;
+}
+body.dark-mode .c-stat-box.best .c-stat-val {
+  color: #86efac !important;
+}
+
+/* --- Trạng thái THƯỜNG --- */
+body.dark-mode .c-stat-box {
+  background-color: var(--bg-input) !important;
+  border-color: var(--border) !important;
+}
+
+/* 5. SỬA MÀU CHỮ CÂU HỎI & ĐÁP ÁN */
+body.dark-mode .question-text {
+  color: #cbd5e1 !important; /* Chữ câu hỏi xám bạc */
+  font-weight: 500;
+}
+body.dark-mode .question-header span {
+  color: #60a5fa !important;
+}
+body.dark-mode .option-label {
+  background-color: #0f172a !important;
+  color: #94a3b8 !important; /* Đáp án chưa chọn màu tối hơn chút */
+  border-color: var(--border) !important;
+}
+body.dark-mode .option-label:hover {
+  background-color: #334155 !important;
+  border-color: #60a5fa !important;
+  color: #e2e8f0 !important;
+}
+body.dark-mode .option-input:checked + .option-label {
+  background-color: rgba(30, 58, 138, 0.5) !important;
+  color: #93c5fd !important;
+  border-color: #3b82f6 !important;
+}
+/* Màu đúng/sai */
+body.dark-mode .option-label.correct {
+  background-color: rgba(6, 78, 59, 0.5) !important;
+  color: #86efac !important;
+  border-color: #059669 !important;
+}
+body.dark-mode .option-label.incorrect {
+  background-color: rgba(127, 29, 29, 0.4) !important;
+  color: #fca5a5 !important;
+  border-color: #dc2626 !important;
+}
+
+/* 6. MODAL LỊCH SỬ */
+body.dark-mode .modal-header,
+body.dark-mode .modal-body {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border) !important;
+  color: var(--text-main) !important;
+}
+body.dark-mode .history-tabs {
+  background-color: #0f172a !important;
+  border-bottom-color: var(--border) !important;
+}
+body.dark-mode .tab-btn {
+  color: var(--text-muted) !important;
+}
+body.dark-mode .tab-btn:hover {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+}
+body.dark-mode .tab-btn.active {
+  color: #60a5fa !important;
+  background-color: rgba(30, 64, 175, 0.2) !important;
+  border-bottom-color: #60a5fa !important;
+}
+body.dark-mode .history-overview {
+  background-color: rgba(30, 58, 138, 0.3) !important;
+  border-bottom-color: #1e40af !important;
+}
+body.dark-mode .overview-val {
+  color: #e2e8f0 !important; /* Số liệu sáng vừa phải */
+}
+body.dark-mode .overview-val[style*="#16a34a"] {
+  color: #4ade80 !important;
+}
+body.dark-mode .overview-val[style*="#dc2626"] {
+  color: #f87171 !important;
+}
+
+body.dark-mode .overview-label {
+  color: #94a3b8 !important;
+}
+body.dark-mode .stats-filter-wrapper label {
+  color: #94a3b8 !important;
+}
+body.dark-mode #statsFilter {
+  background-color: #020617 !important;
+  color: #cbd5e1 !important;
+  border: 1px solid var(--border) !important;
+}
+body.dark-mode .history-card-wrapper {
+  background-color: var(--bg-card) !important;
+  border-color: var(--border) !important;
+}
+body.dark-mode .history-summary {
+  background-color: transparent !important;
+  color: #cbd5e1 !important;
+}
+body.dark-mode .history-summary:hover {
+  background-color: #334155 !important;
+}
+body.dark-mode .hist-name {
+  color: #e2e8f0 !important; /* Tên đề sáng hơn chút */
+}
+body.dark-mode .hist-date {
+  color: #64748b !important;
+}
+body.dark-mode .history-details-box {
+  background-color: #020617 !important;
+  border-top-color: var(--border) !important;
+}
+body.dark-mode .hist-q-item {
+  background-color: #1e293b !important;
+  border-color: var(--border) !important;
+  color: #cbd5e1 !important;
+}
+body.dark-mode .hist-q-item.hist-correct {
+  border-left-color: #22c55e !important;
+  background-color: rgba(6, 78, 59, 0.3) !important;
+}
+body.dark-mode .hist-q-item.hist-wrong {
+  border-left-color: #ef4444 !important;
+  background-color: rgba(127, 29, 29, 0.3) !important;
+}
+body.dark-mode .hist-correct-ans {
+  color: #4ade80 !important;
+  border-top-color: #334155 !important;
+}
+body.dark-mode .weak-item {
+  background-color: #1e293b !important;
+  border-color: var(--border) !important;
+}
+body.dark-mode .weak-q {
+  color: #e2e8f0 !important;
+}
+body.dark-mode .weak-content {
+  color: #94a3b8 !important;
+}
+body.dark-mode .weak-ans {
+  background-color: rgba(6, 78, 59, 0.4) !important;
+  color: #86efac !important;
+}
+body.dark-mode .weak-count {
+  background-color: rgba(127, 29, 29, 0.4) !important;
+  color: #fca5a5 !important;
+  border-color: #7f1d1d !important;
+}
+
+/* 7. AI TUTOR (GIA SƯ AI) */
+body.dark-mode #aiResultBox {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+body.dark-mode #aiResultBox.expanded {
+  background-color: rgba(2, 6, 23, 0.9) !important;
+}
+body.dark-mode #aiResultBox.expanded #aiContent {
+  background-color: #1e293b !important;
+  color: #cbd5e1 !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+}
+body.dark-mode .btn-close-ai-expanded {
+  background-color: #334155 !important;
+  color: #cbd5e1 !important;
+  border-color: #475569 !important;
+}
+body.dark-mode .btn-close-ai-expanded:hover {
+  background-color: #ef4444 !important;
+  color: white !important;
+}
+body.dark-mode .ai-response-item {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  box-shadow: none !important;
+}
+body.dark-mode .ai-response-q {
+  color: #818cf8 !important;
+  border-bottom-color: #334155 !important;
+}
+body.dark-mode .ai-explanation {
+  color: #94a3b8 !important; /* Giải thích màu xám dịu */
+}
+body.dark-mode .ai-response-tip {
+  background-color: rgba(69, 26, 3, 0.4) !important;
+  border-color: #92400e !important;
+  color: #fbbf24 !important;
+}
+body.dark-mode .ai-response-tip::before {
+  color: #f59e0b !important;
+}
+body.dark-mode .ai-card {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+}
+body.dark-mode .ai-card-title {
+  color: #94a3b8 !important;
+}
+body.dark-mode .ai-card-content {
+  color: #cbd5e1 !important;
+}
+body.dark-mode .card-weakness {
+  background-color: rgba(69, 10, 10, 0.4) !important;
+  border-left-color: #ef4444 !important;
+}
+body.dark-mode .card-weakness .ai-card-title {
+  color: #fca5a5 !important;
+}
+body.dark-mode .card-solution {
+  background-color: rgba(23, 37, 84, 0.4) !important;
+  border-left-color: #3b82f6 !important;
+}
+body.dark-mode .card-solution .ai-card-title {
+  color: #93c5fd !important;
+}
+body.dark-mode #aiLoading {
+  color: #a78bfa !important;
+}
+body.dark-mode .spinner {
+  border-color: rgba(255, 255, 255, 0.1);
+  border-top-color: #a78bfa;
+}
+body.dark-mode .btn-icon-small {
+  background-color: #1e293b !important;
+  color: #94a3b8 !important;
+  border-color: #334155 !important;
+}
+body.dark-mode .btn-icon-small:hover {
+  color: #60a5fa !important;
+  border-color: #60a5fa !important;
+}
+
+/* 8. CÁC THÀNH PHẦN KHÁC */
+body.dark-mode .d-item {
+  color: var(--text-main);
+}
+body.dark-mode .d-item:hover {
+  background: #334155;
+  border-color: #60a5fa;
+}
+body.dark-mode .d-name {
+  color: #e2e8f0;
+}
+body.dark-mode .drive-subtitle {
+  color: #94a3b8;
+}
+body.dark-mode .st-title {
+  color: #e2e8f0 !important;
+}
+body.dark-mode .st-desc {
+  color: #94a3b8 !important;
+}
+body.dark-mode .study-card:hover {
+  background-color: #334155 !important;
+}
+
+/* Scrollbar tối */
+body.dark-mode ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+body.dark-mode ::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+/* Flashcard Mode */
+body.dark-mode .fc-header-control,
+body.dark-mode .fc-card,
+body.dark-mode .btn-fc-nav {
+  background: var(--bg-card);
+  border-color: var(--border);
+  color: var(--text-main);
+}
+body.dark-mode .fc-question-text {
+  color: #e2e8f0 !important;
+}
+body.dark-mode .fc-option-item {
+  background: #0f172a;
+  border-color: var(--border);
+  color: #94a3b8 !important;
+}
+body.dark-mode .fc-option-item:hover {
+  border-color: var(--highlight);
+  background: #1e293b;
+  color: #e2e8f0 !important;
+}
+body.dark-mode .fc-option-item.correct {
+  background: rgba(6, 78, 59, 0.5) !important;
+  color: #86efac !important;
+  border-color: #059669 !important;
+}
+body.dark-mode .fc-option-item.incorrect {
+  background: rgba(127, 29, 29, 0.4) !important;
+  color: #fca5a5 !important;
+  border-color: #dc2626 !important;
+}
+body.dark-mode .btn-fc-nav:hover {
+  background: #334155;
+}
+body.dark-mode .skeleton {
+  background: #1e293b;
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+}
+body.dark-mode #btnCloseHistory{
+    color: #e2e8f0;
+}
