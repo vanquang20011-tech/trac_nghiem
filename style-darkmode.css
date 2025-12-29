@@ -381,6 +381,356 @@ body.dark-mode .skeleton {
   background: #1e293b;
   background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
 }
-body.dark-mode #btnCloseHistory{
-    color: #e2e8f0;
+body.dark-mode #btnCloseHistory {
+  color: #e2e8f0;
+}
+
+/* =========================================================
+   9. FIX BỔ SUNG: MÀU SẮC LÀM BÀI & NAV SIDEBAR
+   ========================================================= */
+
+/* --- A. THANH DANH SÁCH CÂU HỎI (SIDEBAR) --- */
+
+/* 1. Câu ĐÃ LÀM (Màu xanh dương) */
+body.dark-mode .qnav-item.nav-answered {
+  background-color: rgba(30, 58, 138, 0.6) !important; /* Xanh than đậm */
+  border-color: #3b82f6 !important;
+  color: #93c5fd !important; /* Chữ xanh trời sáng */
+}
+
+/* 2. Câu ĐÚNG (Màu xanh lá - Khi nộp bài) */
+body.dark-mode .qnav-item.nav-correct {
+  background-color: rgba(6, 78, 59, 0.8) !important; /* Xanh rêu đậm */
+  border-color: #059669 !important;
+  color: #86efac !important; /* Chữ xanh ngọc sáng */
+}
+
+/* 3. Câu SAI (Màu đỏ - Khi nộp bài) */
+body.dark-mode .qnav-item.nav-incorrect {
+  background-color: rgba(127, 29, 29, 0.8) !important; /* Đỏ rượu đậm */
+  border-color: #ef4444 !important;
+  color: #fca5a5 !important; /* Chữ đỏ hồng sáng */
+}
+
+/* --- B. TRẠNG THÁI ĐÁP ÁN (OPTIONS) --- */
+
+/* 1. Đang chọn (Selected) - Làm nổi bật hơn */
+body.dark-mode .option-input:checked + .option-label {
+  background-color: rgba(
+    29,
+    78,
+    216,
+    0.25
+  ) !important; /* Nền xanh dương trong suốt */
+  border-color: #60a5fa !important; /* Viền sáng */
+  color: #bfdbfe !important; /* Chữ xanh nhạt dễ đọc */
+  box-shadow: 0 0 0 1px #60a5fa !important; /* Hiệu ứng phát sáng nhẹ */
+}
+
+/* 2. Đáp án ĐÚNG (Correct Result) */
+body.dark-mode .option-label.correct {
+  background-color: rgba(20, 83, 45, 0.6) !important; /* Nền xanh lá đậm */
+  border-color: #4ade80 !important; /* Viền xanh sáng */
+  color: #86efac !important; /* Chữ xanh sáng nổi bật */
+  font-weight: bold;
+}
+
+/* 3. Đáp án SAI (Incorrect Result) */
+body.dark-mode .option-label.incorrect {
+  background-color: rgba(127, 29, 29, 0.6) !important; /* Nền đỏ đậm */
+  border-color: #f87171 !important; /* Viền đỏ sáng */
+  color: #fca5a5 !important; /* Chữ đỏ sáng */
+  opacity: 1 !important;
+}
+
+/* 4. Thẻ câu hỏi bị khóa sau khi nộp (Locked Card) */
+body.dark-mode .locked-card {
+  background-color: #1e293b !important; /* Giữ nền tối */
+  opacity: 1 !important; /* Không làm mờ quá nhiều để còn đọc được */
+  border: 1px solid #334155; /* Viền xám nhẹ */
+}
+
+/* =========================================================
+   10. FIX CUỐI CÙNG: MÀU SẮC SAU KHI NỘP BÀI & ĐỘ TƯƠNG PHẢN
+   (Ghi đè để làm nổi bật kết quả và chữ viết)
+   ========================================================= */
+
+/* --- A. TĂNG ĐỘ NỔI BẬT CHO CHỮ (TEXT CONTRAST) --- */
+/* Làm chữ câu hỏi sáng hơn (gần như trắng) để tách biệt với nền */
+body.dark-mode .question-text {
+  color: #f1f5f9 !important; /* Slate-100: Sáng rõ nhưng không chói lóa */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5); /* Bóng nhẹ giúp chữ nổi lên */
+}
+
+/* Các chữ đáp án bình thường cũng sáng lên một chút */
+body.dark-mode .option-label {
+  color: #e2e8f0 !important; /* Slate-200 */
+}
+
+/* --- B. KHUNG CÂU HỎI SAU KHI CHẤM (CARD BORDER) --- */
+/* Thêm viền màu rõ ràng cho cả thẻ câu hỏi để biết đúng hay sai */
+
+/* Câu ĐÚNG: Viền xanh lá, nền xanh rêu rất nhạt */
+body.dark-mode .question-card.correct {
+  border: 2px solid #059669 !important; /* Viền xanh lá đậm rõ nét */
+  background-color: rgba(
+    6,
+    78,
+    59,
+    0.25
+  ) !important; /* Nền xanh tối trong suốt */
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.1) !important; /* Ánh sáng xanh nhẹ */
+}
+
+/* Câu SAI: Viền đỏ, nền đỏ rượu rất nhạt */
+body.dark-mode .question-card.incorrect {
+  border: 2px solid #dc2626 !important; /* Viền đỏ đậm rõ nét */
+  background-color: rgba(
+    127,
+    29,
+    29,
+    0.25
+  ) !important; /* Nền đỏ tối trong suốt */
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.1) !important; /* Ánh sáng đỏ nhẹ */
+}
+
+/* --- C. ĐÁP ÁN BÊN TRONG (OPTIONS) --- */
+
+/* Đáp án ĐÚNG (Màu xanh neon dịu, chữ trắng) */
+body.dark-mode .option-label.correct {
+  background-color: rgba(21, 128, 61, 0.4) !important;
+  border-color: #4ade80 !important; /* Viền xanh sáng */
+  color: #ffffff !important; /* Chữ trắng tinh cho dễ đọc */
+  font-weight: bold;
+}
+
+/* Đáp án SAI mà người dùng chọn (Đỏ cam) */
+body.dark-mode .option-label.incorrect {
+  background-color: rgba(153, 27, 27, 0.4) !important;
+  border-color: #f87171 !important; /* Viền đỏ sáng */
+  color: #fca5a5 !important; /* Chữ đỏ hồng */
+  opacity: 1 !important; /* Không làm mờ */
+}
+
+/* --- D. BẢNG DANH SÁCH CÂU HỎI (SIDEBAR NAV) --- */
+/* Cố định màu sắc cho các ô số bên phải */
+
+/* Ô câu hỏi ĐÃ LÀM (Chưa nộp) */
+body.dark-mode .qnav-item.nav-answered {
+  background-color: #1e3a8a !important; /* Xanh dương đậm */
+  border-color: #60a5fa !important;
+  color: #ffffff !important;
+}
+
+/* Ô câu hỏi ĐÚNG (Sau khi nộp) */
+body.dark-mode .qnav-item.nav-correct {
+  background-color: #15803d !important; /* Xanh lá đậm */
+  border-color: #4ade80 !important; /* Viền xanh sáng */
+  color: #ffffff !important;
+  font-weight: bold;
+}
+
+/* Ô câu hỏi SAI (Sau khi nộp) */
+body.dark-mode .qnav-item.nav-incorrect {
+  background-color: #b91c1c !important; /* Đỏ đậm */
+  border-color: #f87171 !important; /* Viền đỏ sáng */
+  color: #ffffff !important;
+  font-weight: bold;
+}
+
+/* Ô hiện tại đang xem (Active/Focus) */
+body.dark-mode .qnav-item:focus {
+  outline: 2px solid #f59e0b; /* Viền vàng cam khi bấm vào */
+  outline-offset: 2px;
+}
+
+/* =========================================================
+   11. TWEAKS & POLISH: CÁC CHI TIẾT TINH CHỈNH CUỐI CÙNG
+   (Làm mượt hiệu ứng, input và thanh tiến độ)
+   ========================================================= */
+
+/* --- A. HIỆU ỨNG CHUYỂN MÀU MƯỢT (TRANSITION) --- */
+/* Giúp mắt không bị chói khi bật/tắt dark mode đột ngột */
+body,
+.exam-header,
+.question-card,
+.btn-tool,
+input,
+select {
+  transition: background-color 0.3s ease, color 0.3s ease,
+    border-color 0.3s ease !important;
+}
+
+/* --- B. MÀU BÔI ĐEN VĂN BẢN (TEXT SELECTION) --- */
+/* Đổi màu xanh mặc định thành màu hợp tông dark mode */
+body.dark-mode ::selection {
+  background-color: rgba(
+    59,
+    130,
+    246,
+    0.4
+  ) !important; /* Xanh dương trong suốt */
+  color: #ffffff !important;
+}
+
+/* --- C. TRẠNG THÁI FOCUS INPUT (NHẬP GIỜ) --- */
+/* Khi bấm vào ô nhập thời gian, viền sẽ sáng lên rõ ràng */
+body.dark-mode input:focus,
+body.dark-mode select:focus,
+body.dark-mode textarea:focus {
+  outline: none !important;
+  border-color: #60a5fa !important; /* Viền xanh sáng */
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important; /* Hiệu ứng tỏa sáng nhẹ */
+  background-color: #1e293b !important; /* Giữ nền tối */
+}
+
+/* --- D. THANH TIẾN ĐỘ (PROGRESS BAR) --- */
+/* Làm rõ phần chưa chạy của thanh tiến độ trên cùng */
+body.dark-mode .progress-container {
+  background-color: #334155 !important; /* Màu nền của rãnh thanh tiến độ */
+}
+body.dark-mode #examProgressBar {
+  background: linear-gradient(
+    90deg,
+    #3b82f6,
+    #8b5cf6
+  ) !important; /* Gradient Xanh-Tím đẹp mắt */
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); /* Hiệu ứng neon phát sáng */
+}
+
+/* --- E. MODAL GOOGLE DRIVE (TINH CHỈNH) --- */
+/* Đảm bảo icon folder và file nổi bật trên nền tối */
+body.dark-mode .d-icon-box svg rect {
+  stroke: #475569 !important; /* Viền icon file nhạt đi chút */
+  fill: #1e293b !important; /* Nền icon file tối lại */
+}
+body.dark-mode .d-item:hover {
+  background-color: rgba(
+    59,
+    130,
+    246,
+    0.15
+  ) !important; /* Hover vào file/folder sáng nhẹ */
+  border-color: #60a5fa !important;
+}
+/* Đường dẫn thư mục (Breadcrumb) */
+body.dark-mode .drive-breadcrumb {
+  color: #93c5fd !important; /* Xanh nhạt dễ đọc */
+}
+
+/* --- F. BIỂU ĐỒ CHART.JS (FIX MÀU LƯỚI) --- */
+/* Lưu ý: ChartJS vẽ bằng Canvas nên CSS khó can thiệp sâu, 
+   nhưng ta có thể chỉnh màu nền container để biểu đồ nổi hơn */
+body.dark-mode .chart-container {
+  background-color: #1e293b !important;
+  border: 1px solid #334155 !important;
+  border-radius: 12px;
+}
+/* Thêm vào cuối style-darkmode.css */
+@media (max-width: 768px) {
+  /* Tăng kích thước vùng bấm cho các nút trên mobile để dễ thao tác hơn */
+  body.dark-mode .btn-icon-small,
+  body.dark-mode .header-toggle-btn {
+    padding: 12px;
+    background-color: #1e293b;
+    border: none;
+    color: #3b82f6;
+  }
+}
+
+/* ========================
+   12. GAMIFICATION (LEVEL & STREAK) - DARK MODE
+   ======================== */
+
+body.dark-mode .user-stats-card {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Nền hiệu ứng góc */
+body.dark-mode .user-stats-card::before {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), transparent);
+}
+
+/* Chữ Level Title */
+body.dark-mode .level-title {
+  color: #60a5fa !important;
+}
+
+/* Thông số XP */
+body.dark-mode .xp-info {
+  color: #94a3b8 !important;
+}
+
+/* Thanh XP nền tối */
+body.dark-mode .xp-progress-bg {
+  background-color: #0f172a !important;
+}
+
+/* Lửa vẫn giữ màu cam nhưng thêm phát sáng */
+body.dark-mode .fire-icon {
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.6));
+}
+
+/* ========================
+   GAMIFICATION DARK MODE (NEON FIX)
+   ======================== */
+
+/* Rank 1 (Novice) - Dark */
+body.dark-mode .user-stats-card.rank-1 {
+  background: #1e293b;
+  border-color: #334155;
+}
+body.dark-mode .rank-1 .level-badge {
+  background: #334155;
+  color: #94a3b8;
+  box-shadow: none;
+}
+
+/* Rank 2 (Elite) - Dark (Biến thành Neon Vàng/Xanh) */
+body.dark-mode .user-stats-card.rank-2 {
+  background: #1e293b; /* Về nền tối */
+  border-color: #facc15; /* Viền vàng neon */
+  box-shadow: 0 0 15px rgba(250, 204, 21, 0.2);
+}
+body.dark-mode .rank-2 .level-badge {
+  background: rgba(250, 204, 21, 0.2);
+  color: #facc15;
+  text-shadow: 0 0 5px rgba(250, 204, 21, 0.5);
+}
+body.dark-mode .rank-2 .level-title {
+  text-shadow: 0 0 8px rgba(250, 204, 21, 0.6);
+}
+
+/* Rank 4 (Legendary) - Tăng cường độ sáng trong đêm */
+body.dark-mode .user-stats-card.rank-4 {
+  box-shadow: 0 0 40px rgba(124, 58, 237, 0.6); /* Glow tím lan tỏa mạnh hơn */
+}
+
+/* =========================================
+   FIX LỖI HIỂN THỊ STREAK (DARK MODE)
+   ========================================= */
+
+/* 1. Màu mặc định cho Streak (Cấp thấp) */
+body.dark-mode .streak-badge {
+  color: #f1f5f9 !important; /* Chữ màu trắng sáng */
+  background: rgba(255, 255, 255, 0.1) !important; /* Nền mờ sáng nhẹ */
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+/* 2. Streak cho Rank 3 (Đại Sư - Lửa) */
+body.dark-mode .rank-3 .streak-badge {
+  color: #fbbf24 !important; /* Màu vàng cam rực rỡ */
+  background: rgba(234, 88, 12, 0.2) !important; /* Nền cam tối */
+  border-color: #f97316 !important;
+  text-shadow: 0 0 5px rgba(251, 191, 36, 0.5); /* Phát sáng nhẹ */
+}
+
+/* 3. Streak cho Rank 4 (Huyền Thoại) */
+body.dark-mode .rank-4 .streak-badge {
+  color: #fef08a !important; /* Vàng chanh sáng */
+  background: rgba(253, 224, 71, 0.15) !important;
+  border-color: #eab308 !important;
+  text-shadow: 0 0 8px #facc15; /* Glow mạnh */
 }

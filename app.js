@@ -149,6 +149,20 @@ const DRIVE_FOLDER_ID = "";
 // HỆ THỐNG QUẢN LÝ CÂU SAI (CLOUD FIREBASE)
 // ==========================================
 
+// Hàm tạo Key an toàn: Tự động chuyển sang mã Hash nếu câu quá dài
+function getSmartKey(text) {
+  // Nếu câu ngắn (< 300 ký tự) -> Dùng cách cũ (Base64) để tương thích dữ liệu cũ
+  if (text.length < 300) return encodeKey(text);
+
+  // Nếu câu dài -> Tạo mã Hash ngắn gọn (Ví dụ: long_q_152342)
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = (hash << 5) - hash + text.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  return "long_q_" + Math.abs(hash);
+}
+
 // 1. Hàm dọn dẹp tên đề thi để làm ID (Tránh lỗi ký tự cấm của Firebase)
 const getSafeId = (str) => {
   if (!str) return "unknown_exam";
@@ -158,10 +172,22 @@ const getSafeId = (str) => {
   return noAccent.trim().replace(/[\/\#\$\.\[\]\s]/g, "_");
 };
 
-// Hàm mã hóa câu hỏi để làm Key an toàn trong Firestore
-const encodeKey = (str) => btoa(unescape(encodeURIComponent(str.trim())));
+// SỬA LỖI: Thay thế các ký tự cấm của Firebase (+, /) bằng (-, _)
+const encodeKey = (str) => {
+  return btoa(unescape(encodeURIComponent(str.trim())))
+    .replace(/\+/g, "-") // Thay dấu + thành -
+    .replace(/\//g, "_") // Thay dấu / thành _ (SỬA LỖI QUAN TRỌNG)
+    .replace(/=+$/, ""); // Xóa dấu = ở cuối cho gọn
+};
+
 const decodeKey = (str) => {
   try {
+    // Khôi phục lại ký tự gốc trước khi giải mã
+    str = str.replace(/-/g, "+").replace(/_/g, "/");
+    // Thêm lại padding (=) nếu thiếu
+    while (str.length % 4) {
+      str += "=";
+    }
     return decodeURIComponent(escape(atob(str)));
   } catch (e) {
     return "Lỗi mã hóa câu hỏi";
@@ -169,14 +195,24 @@ const decodeKey = (str) => {
 };
 
 // 2. Cập nhật lỗi lên Cloud (Cộng hoặc Trừ)
+// 2. Cập nhật lỗi lên Cloud (Cộng hoặc Trừ) - PHIÊN BẢN FIX LỖI TREO
 async function updateMistakeInCloud(examName, questionText, isCorrect) {
   const user = auth.currentUser;
-  if (!user) return 0; // Chưa đăng nhập thì không lưu được
+  if (!user) return 0;
 
-  const safeExamId = getSafeId(examName); // <--- Tên document sẽ dễ đọc
-  const qKey = encodeKey(questionText);
+  const safeExamId = getSafeId(examName);
+  const originalKey = encodeKey(questionText);
+  const qKey = getSmartKey(questionText);
+  let targetKey = originalKey; // Mặc định dùng khóa tạo từ text
 
-  // Đường dẫn: users -> [uid] -> mistake_tracking -> [TÊN ĐỀ THI]
+  // Kiểm tra độ dài khóa (Firestore giới hạn 1500 bytes)
+  if (targetKey.length > 1000) {
+    console.warn(
+      "⚠️ Câu hỏi quá dài, có thể gây lỗi Cloud:",
+      questionText.substring(0, 50) + "..."
+    );
+  }
+
   const docRef = db
     .collection("users")
     .doc(user.uid)
@@ -184,42 +220,93 @@ async function updateMistakeInCloud(examName, questionText, isCorrect) {
     .doc(safeExamId);
 
   try {
+    // --- BƯỚC 1: LẤY DỮ LIỆU ĐỂ KIỂM TRA TRƯỚC ---
+    const doc = await docRef.get();
+
+    // Nếu chưa có dữ liệu gì trên Cloud
+    if (!doc.exists) {
+      if (isCorrect) return 0; // Đúng thì thôi, không cần làm gì
+      // Nếu sai thì tạo mới ở dưới
+    }
+
+    let currentCount = 0;
+
+    // --- BƯỚC 2: TÌM KHÓA CHÍNH XÁC (SMART LOOKUP) ---
+    if (doc.exists) {
+      const data = doc.data();
+
+      // Trường hợp 1: Khóa khớp hoàn toàn
+      if (data[targetKey] !== undefined) {
+        currentCount = data[targetKey];
+      }
+      // Trường hợp 2: Khóa bị lệch (do khoảng trắng/encode), phải đi tìm
+      else {
+        // Quét tất cả các khóa đang có để tìm câu tương tự
+        const cleanQ = questionText.trim();
+        const foundKey = Object.keys(data).find((k) => {
+          if (k === "last_updated") return false;
+          try {
+            // Giải mã khóa cũ xem có khớp nội dung không
+            return decodeKey(k).trim() === cleanQ;
+          } catch (e) {
+            return false;
+          }
+        });
+
+        if (foundKey) {
+          console.log("🔧 Đã tìm thấy khóa khớp (Fix lỗi lệch):", foundKey);
+          targetKey = foundKey; // Dùng khóa thực tế trong DB
+          currentCount = data[foundKey];
+        }
+      }
+    }
+
+    // --- BƯỚC 3: THỰC HIỆN CẬP NHẬT ---
     if (!isCorrect) {
-      // SAI: Cộng thêm 1
+      // TRƯỜNG HỢP SAI: Cộng thêm 1
+      const newCount = currentCount + 1;
+      // Dùng set({merge: true}) an toàn hơn update
+      let valueToSave;
+      if (questionText.length >= 300) {
+        valueToSave = { c: newCount, t: questionText };
+      } else {
+        valueToSave = newCount;
+      }
+
       await docRef.set(
         {
-          [qKey]: firebase.firestore.FieldValue.increment(1),
+          [qKey]: valueToSave,
           last_updated: firebase.firestore.FieldValue.serverTimestamp(),
         },
         { merge: true }
       );
       return "increased";
     } else {
-      // ĐÚNG: Trừ đi 1 (Sử dụng Transaction để xóa sạch nếu về 0)
-      return db.runTransaction(async (transaction) => {
-        const doc = await transaction.get(docRef);
-        if (!doc.exists) return 0;
+      // TRƯỜNG HỢP ĐÚNG: Xóa hoặc Trừ
+      if (currentCount <= 1) {
+        // Hết nợ -> Xóa field
+        await docRef.update({
+          [qKey]: firebase.firestore.FieldValue.delete(),
+        });
+        return 0;
+      } else {
+        const newCount = currentCount - 1;
+        let valueToSave = newCount;
 
-        const data = doc.data();
-        const currentCount = data[qKey] || 0;
-
-        if (currentCount <= 1) {
-          // Hết nợ -> Xóa field này đi
-          transaction.update(docRef, {
-            [qKey]: firebase.firestore.FieldValue.delete(),
-          });
-          return 0; // Đã xóa xong
-        } else {
-          // Còn nợ -> Trừ 1
-          transaction.update(docRef, {
-            [qKey]: firebase.firestore.FieldValue.increment(-1),
-          });
-          return currentCount - 1;
+        // Nếu đang là dạng Object (câu dài), phải giữ nguyên cấu trúc Object để không mất text
+        if (questionText.length >= 300) {
+          valueToSave = { c: newCount, t: questionText };
         }
-      });
+
+        await docRef.update({
+          [qKey]: valueToSave,
+        });
+        return newCount;
+      }
     }
   } catch (e) {
     console.error("Lỗi cập nhật Cloud:", e);
+    // Nếu lỗi do field quá dài hoặc lỗi khác, trả về -1 để UI báo lỗi
     return -1;
   }
 }
@@ -253,12 +340,18 @@ async function fetchMistakesFromCloud(examName) {
 function setHeaderMode(mode) {
   const setup = document.getElementById("setupPanel");
   const status = document.getElementById("statusPanel");
+  const progressBar = document.querySelector(".progress-container"); // Lấy thanh tiến trình
+
   if (mode === "active") {
+    // --- ĐANG LÀM BÀI ---
     setup.style.display = "none";
     status.style.display = "flex";
+    if (progressBar) progressBar.style.display = "block"; // HIỆN thanh tiến trình
   } else {
+    // --- CHẾ ĐỘ CHỜ / SETUP ---
     setup.style.display = "flex";
     status.style.display = "none";
+    if (progressBar) progressBar.style.display = "none"; // ẨN thanh tiến trình
   }
 }
 
@@ -346,6 +439,7 @@ window.startExamNow = function () {
     alert("Vui lòng chọn file đề trước!");
     return;
   }
+  isReviewMode = false;
   const cloned = pendingData.data.map((q) => ({
     ...q,
     options: Array.isArray(q.options) ? [...q.options] : [],
@@ -662,7 +756,8 @@ function generateQuiz() {
           const labels = card.querySelectorAll(".option-label");
           const currentExamName =
             document.getElementById("examName").textContent;
-
+          card.querySelectorAll("input").forEach((i) => (i.disabled = true));
+          card.classList.add("locked-card");
           // Xóa màu cũ
           labels.forEach((l) => l.classList.remove("correct", "incorrect"));
 
@@ -685,9 +780,17 @@ function generateQuiz() {
             inp.nextElementSibling.classList.add("correct");
             if (btn) btn.classList.add("nav-correct");
 
-            // SỬA LỖI Ở ĐÂY: Dùng updateMistakeInCloud và .then()
-            updateMistakeInCloud(currentExamName, q.question, true).then(
-              (remaining) => {
+            // Gọi Firebase trừ điểm
+            updateMistakeInCloud(currentExamName, q.question, true)
+              .then((remaining) => {
+                // --- SỬA: Xử lý nếu gặp lỗi (-1) ---
+                if (remaining === -1) {
+                  feedback.style.background = "#fee2e2";
+                  feedback.innerHTML = `<span style="color:#dc2626">⚠️ Lỗi kết nối! Chưa cập nhật được lên Cloud.</span>`;
+                  return;
+                }
+                // -----------------------------------
+
                 if (remaining > 0) {
                   feedback.style.background = "#fff7ed"; // Cam nhạt
                   feedback.innerHTML = `<span style="color:#c2410c">👏 Đúng rồi! Nhưng bạn vẫn còn nợ câu này <b>${remaining}</b> lần nữa.</span>`;
@@ -695,8 +798,11 @@ function generateQuiz() {
                   feedback.style.background = "#f0fdf4"; // Xanh nhạt
                   feedback.innerHTML = `<span style="color:#16a34a">🎉 Xuất sắc! Đã xóa câu này khỏi danh sách sai trên Cloud.</span>`;
                 }
-              }
-            );
+              })
+              .catch((err) => {
+                // Phòng hờ lỗi không mong muốn
+                feedback.innerHTML = "⚠️ Lỗi hệ thống. Vui lòng thử lại.";
+              });
           } else {
             // --- TRƯỜNG HỢP SAI ---
             inp.nextElementSibling.classList.add("incorrect");
@@ -835,7 +941,12 @@ function grade(autoSubmit) {
       .then(() => console.log("☁️ Đã lưu các câu sai vào Firebase"));
   }
   // ---------------------------
-
+  if (score > 0) {
+    // Ví dụ: Mỗi câu đúng được 10 XP (hoặc tùy bạn chỉnh)
+    // Nếu muốn khó hơn: gainXP(score * 5);
+    gainXP(score * 10);
+    console.log(`🎉 Đã cộng ${score * 10} XP`);
+  }
   const total = questionsData.length;
   const percent = Math.round((score / total) * 100);
   let rank = percent >= 80 ? "Giỏi" : percent >= 50 ? "Khá" : "Yếu";
@@ -1394,7 +1505,7 @@ async function renderStats(filterName) {
     "<p style='text-align:center; padding:20px'>⏳ Đang đồng bộ dữ liệu từ Cloud...</p>";
 
   try {
-    // 1. Lấy dữ liệu từ Cloud (Sổ tay câu sai)
+    // 1. Lấy dữ liệu (Giữ nguyên logic lấy snapshot cũ)
     let snapshot;
     const collectionRef = db
       .collection("users")
@@ -1402,47 +1513,53 @@ async function renderStats(filterName) {
       .collection("mistake_tracking");
 
     if (filterName !== "all") {
-      // Nếu lọc theo tên đề cụ thể
       const safeId = getSafeId(filterName);
       const doc = await collectionRef.doc(safeId).get();
-      if (doc.exists) {
-        // Giả lập snapshot để dùng chung logic
-        snapshot = { docs: [doc] };
-      } else {
-        snapshot = { docs: [] };
-      }
+      snapshot = doc.exists ? { docs: [doc] } : { docs: [] };
     } else {
-      // Lấy tất cả các đề
       snapshot = await collectionRef.get();
     }
 
     if (snapshot.empty) {
-      list.innerHTML = `<div style="text-align:center; padding:40px;">
-            <div style="font-size:40px; margin-bottom:10px;">🎉</div>
-            <p style="color:var(--success); font-weight:bold;">Xuất sắc! Sổ tay câu sai của bạn đang trống.</p>
-            <p style="color:#64748b; font-size:13px;">Hãy làm bài thi mới hoặc chọn đề khác.</p>
-          </div>`;
+      list.innerHTML = `<div style="text-align:center; padding:40px;"><p style="color:var(--success); font-weight:bold;">Sổ tay câu sai trống!</p></div>`;
       return;
     }
 
-    // 2. Xử lý dữ liệu
+    // 2. Xử lý dữ liệu (UPDATE MỚI: Đọc được cả dạng số và dạng object)
     let allMistakes = [];
 
     snapshot.docs.forEach((doc) => {
       const data = doc.data();
-      const examId = doc.id; // Tên đề (dạng safeId)
+      const examId = doc.id;
 
       Object.keys(data).forEach((key) => {
-        if (key === "last_updated") return; // Bỏ qua field thời gian
+        if (key === "last_updated") return;
 
-        const count = data[key];
+        let count = 0;
+        let questionText = "";
+
+        const entry = data[key];
+
+        // --- LOGIC ĐỌC DỮ LIỆU THÔNG MINH ---
+        if (typeof entry === "object" && entry !== null) {
+          // Dạng mới (Câu dài): Lấy số lần từ .c và nội dung từ .t
+          count = entry.c;
+          questionText = entry.t;
+        } else {
+          // Dạng cũ (Câu ngắn): Giá trị chính là số lần
+          count = entry;
+          try {
+            // Giải mã key để lấy lại nội dung câu hỏi
+            questionText = decodeKey(key);
+          } catch (e) {
+            questionText = "Lỗi hiển thị câu hỏi";
+          }
+        }
+        // -------------------------------------
+
         if (count > 0) {
-          const questionText = decodeKey(key);
-
-          // Tìm đáp án đúng từ lịch sử cũ (vì Cloud chỉ lưu mỗi câu hỏi + số lần sai)
-          // Ta quét trong globalHistoryData để tìm câu hỏi khớp text
+          // Tìm đáp án đúng từ lịch sử cục bộ (nếu có)
           let foundAnswer = "Chưa có dữ liệu";
-          // Tìm bài làm gần nhất có chứa câu hỏi này
           for (let h of globalHistoryData) {
             if (h.details) {
               const qDetail = h.details.find(
@@ -1465,45 +1582,23 @@ async function renderStats(filterName) {
       });
     });
 
-    // 3. Sắp xếp: Sai nhiều lên đầu
+    // 3. Sắp xếp & Render (Giữ nguyên phần render cũ của bạn)
     allMistakes.sort((a, b) => b.w - a.w);
 
     if (allMistakes.length === 0) {
-      list.innerHTML = `<div style="text-align:center; padding:40px;">
-            <div style="font-size:40px; margin-bottom:10px;">🎉</div>
-            <p style="color:var(--success); font-weight:bold;">Bạn đã trả lời đúng hết các câu nợ!</p>
-          </div>`;
+      list.innerHTML = `<div style="text-align:center; padding:40px;"><p style="color:var(--success);">Bạn đã xóa hết nợ!</p></div>`;
       return;
     }
 
-    // 4. Render ra màn hình
-    let html = `<div style="padding:12px; background:#fff7ed; border:1px solid #fed7aa; color:#c2410c; margin-bottom:15px; border-radius:8px; font-size:14px; display:flex; align-items:center; gap:10px;">
-        <span style="font-size:20px">🔥</span> 
-        <div>
-            <b>SỔ TAY CÂU SAI (CLOUD)</b><br>
-            Hiện còn <b>${allMistakes.length}</b> câu cần ôn tập. Làm đúng sẽ tự động biến mất khỏi đây.
-        </div>
-      </div>`;
+    let html = `<div style="padding:12px; background:#fff7ed; border:1px solid #fed7aa; color:#c2410c; margin-bottom:15px; border-radius:8px; font-size:14px;"><b>SỔ TAY CÂU SAI</b>: Còn <b>${allMistakes.length}</b> câu.</div>`;
 
     allMistakes.forEach((i) => {
       html += `
         <div class="weak-item">
-            <div class="weak-count" title="Còn nợ ${
-              i.w
-            } lần" style="background:#fee2e2; color:#ef4444; border-color:#fca5a5;">
-                ${i.w}
-            </div>
+            <div class="weak-count" style="background:#fee2e2; color:#ef4444; border-color:#fca5a5;">${i.w}</div>
             <div class="weak-content">
                 <div class="weak-q">${i.q}</div>
-                <div class="weak-ans" style="margin-top:5px; opacity:0.8">
-                    👉 Đáp án: <b>${i.a}</b>
-                </div>
-                <button onclick="window.practiceOne('${encodeKey(i.q)}', '${
-        i.a
-      }')" 
-                        style="display:none; margin-top:8px; padding:4px 8px; font-size:11px; background:#3b82f6; color:white; border:none; border-radius:4px; cursor:pointer;">
-                    Ôn ngay
-                </button>
+                <div class="weak-ans" style="margin-top:5px; opacity:0.8">👉 Đáp án: <b>${i.a}</b></div>
             </div>
         </div>`;
     });
@@ -1511,7 +1606,7 @@ async function renderStats(filterName) {
     list.innerHTML = html;
   } catch (e) {
     console.error(e);
-    list.innerHTML = `<p style='color:red; text-align:center'>Lỗi tải dữ liệu: ${e.message}</p>`;
+    list.innerHTML = `<p style='color:red;'>Lỗi: ${e.message}</p>`;
   }
 }
 
@@ -2180,3 +2275,178 @@ window.startReviewMistakes = async function () {
   generateQuiz();
   window.scrollTo({ top: 0, behavior: "smooth" });
 };
+
+// ==========================================
+// HỆ THỐNG GAMIFICATION (LEVEL & STREAK 2.0)
+// ==========================================
+
+let userStats = {
+  xp: 0, // XP tích lũy hiện tại (trong cấp này)
+  level: 1, // Cấp độ hiện tại
+  streak: 0, // Chuỗi ngày
+  lastStudyDate: null, // Ngày học cuối "YYYY-MM-DD"
+};
+
+// 1. TÍNH ĐỘ KHÓ: Càng lên cao càng cần nhiều XP
+// Công thức: XP cần = Level hiện tại * 500
+// VD: Lv1->Lv2 cần 500XP. Lv2->Lv3 cần 1000XP.
+function getRequiredXP(level) {
+  return level * 500;
+}
+
+// 2. Khởi tạo & Tải dữ liệu từ Cloud
+async function initGamification() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const docRef = db.collection("users").doc(user.uid);
+  try {
+    const doc = await docRef.get();
+    if (doc.exists) {
+      const data = doc.data();
+      if (data.gamification) {
+        userStats = { ...userStats, ...data.gamification };
+      }
+    }
+    checkStreakLogic(); // Kiểm tra xem có bị mất chuỗi không
+    updateGamificationUI();
+  } catch (e) {
+    console.error("Lỗi tải Gamification:", e);
+  }
+}
+
+// 3. Logic Streak (Giữ lửa)
+function checkStreakLogic() {
+  const today = new Date().toISOString().split("T")[0];
+
+  if (userStats.lastStudyDate !== today) {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+
+    // Nếu ngày học cuối KHÔNG PHẢI là hôm qua (tức là đã bỏ > 1 ngày) -> Reset về 0
+    if (userStats.lastStudyDate && userStats.lastStudyDate < yesterdayStr) {
+      userStats.streak = 0;
+    }
+  }
+}
+
+// 4. HÀM CỘNG ĐIỂM (Gọi khi nộp bài)
+async function gainXP(amount) {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  userStats.xp += amount;
+
+  // Logic thăng cấp (Level Up Loop)
+  // Dùng vòng lặp để xử lý trường hợp cộng nhiều XP thăng vài cấp 1 lúc
+  let leveledUp = false;
+  while (true) {
+    const required = getRequiredXP(userStats.level);
+    if (userStats.xp >= required) {
+      userStats.xp -= required; // Trừ đi XP đã dùng để thăng cấp
+      userStats.level++;
+      leveledUp = true;
+    } else {
+      break;
+    }
+  }
+
+  if (leveledUp) {
+    alert(
+      `🎉 CHÚC MỪNG! Bạn đã thăng lên Cấp ${
+        userStats.level
+      }!\nĐộ khó cấp tiếp theo: ${getRequiredXP(userStats.level)} XP`
+    );
+  }
+
+  // Cập nhật Streak (Nếu hôm nay chưa tính)
+  const today = new Date().toISOString().split("T")[0];
+  if (userStats.lastStudyDate !== today) {
+    userStats.streak++;
+    userStats.lastStudyDate = today;
+
+    // Hiệu ứng phóng to Lửa
+    const fireBadge = document.querySelector(".streak-badge");
+    if (fireBadge) {
+      fireBadge.style.transform = "scale(1.3)";
+      setTimeout(() => (fireBadge.style.transform = "scale(1)"), 400);
+    }
+  }
+
+  updateGamificationUI();
+
+  // Lưu Cloud
+  try {
+    await db.collection("users").doc(user.uid).set(
+      {
+        gamification: userStats,
+      },
+      { merge: true }
+    );
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+// 5. Cập nhật giao diện (PHIÊN BẢN: SLIM & INTENSE)
+// 5. Cập nhật giao diện (PHIÊN BẢN: ULTIMATE ANIMATION)
+function updateGamificationUI() {
+  const panel = document.getElementById("gamificationPanel");
+  const lvEl = document.getElementById("userLevel");
+  const strEl = document.getElementById("streakCount");
+
+  if (!lvEl || !strEl) return;
+
+  lvEl.textContent = userStats.level;
+  strEl.textContent = userStats.streak;
+
+  const required = getRequiredXP(userStats.level);
+  const percent = Math.min((userStats.xp / required) * 100, 100);
+
+  document.getElementById("currentXP").textContent = `${userStats.xp} XP`;
+  document.getElementById("requiredXP").textContent = `/ ${required} XP`;
+  document.getElementById("xpBar").style.width = `${percent}%`;
+
+  // --- LOGIC PHÂN CẤP (TIER SYSTEM) ---
+  // Tự động đổi giao diện dựa trên Level
+  let rankClass = "rank-1";
+  let rankName = "Tân Binh";
+
+  // MỐC LEVEL:
+  // 1-9: Rank 1
+  // 10-29: Rank 2 (Elite)
+  // 30-49: Rank 3 (Master - Lửa)
+  // 50+: Rank 4 (Legendary - RGB)
+
+  if (userStats.level >= 50) {
+    rankClass = "rank-4";
+    rankName = "⚔️ HUYỀN THOẠI ⚔️";
+  } else if (userStats.level >= 30) {
+    rankClass = "rank-3";
+    rankName = "🔥 ĐẠI SƯ 🔥";
+  } else if (userStats.level >= 10) {
+    rankClass = "rank-2";
+    rankName = "✨ TINH ANH";
+  }
+
+  // Reset class cũ và gán class mới
+  panel.className = "user-stats-card";
+  panel.classList.add(rankClass);
+
+  // Hiệu ứng Streak cao: Nếu chuỗi > 3 ngày, thêm class cháy mạnh
+  if (userStats.streak >= 3) {
+    document.querySelector(".fire-icon").style.animationDuration = "0.8s"; // Tim đập nhanh hơn
+  } else {
+    document.querySelector(".fire-icon").style.animationDuration = "1.5s";
+  }
+
+  // Cập nhật tên danh hiệu
+  const titleEl = document.getElementById("levelTitle");
+  titleEl.textContent = rankName;
+}
+
+// Khởi chạy khi login
+auth.onAuthStateChanged((user) => {
+  if (user) initGamification();
+});
